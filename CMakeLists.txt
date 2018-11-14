@@ -28,6 +28,7 @@ link_directories(
  
 add_executable(main src/main.cpp)
 add_dependencies(main project_bf)
-target_link_libraries(main bf)
+target_link_libraries(main bf fasta)
+add_library(fasta src/FastaParser.cpp)
 
 
