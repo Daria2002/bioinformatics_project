@@ -31,8 +31,8 @@ std::unordered_set<string> FastaParser::parseKmers()
 		}
 
 		// ... if not header start to parse line
-		if (counter % 500 == 0)
-			cout << "Parsing line " << counter << endl;
+		if (counter % 3500 == 0)
+			cout << "Parsing line... " << counter << endl;
 
 		const char* c_line = current_line.c_str();
 		
@@ -45,7 +45,7 @@ std::unordered_set<string> FastaParser::parseKmers()
 
 			if (!kmerSet.insert(*newKmerString).second)
 			{
-				free(newKmer);
+				//free(newKmer);
 				free(newKmerString);
 			}
 		}

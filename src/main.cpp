@@ -72,13 +72,53 @@ vector<string> generateTestKmerSet(unordered_set<string> kmerSet, int testSize, 
 	return testKmers;
 }
 
+
+float falsePositiveRate(vector<bool> bloomFilterResult, vector<bool> bloomFilterResultReal)
+{
+	float FPrate = 0;
+
+	for (int i = 0; i < bloomFilterResult.size(); i++)
+	{
+		if(!(bloomFilterResult[i] == bloomFilterResultReal[i]))
+			FPrate++;
+	}
+
+	FPrate = (FPrate / bloomFilterResult.size())*100 ;
+	return FPrate;
+}
+
+vector<bool> compareTestKmerWithSavedKmers(unordered_set<string> kmerSet, vector<string> kmerSetTest)
+{
+	vector<bool> bloomFilterResultReal;
+	for(auto kmer : kmerSetTest)
+	{
+		bool setted = false;
+		for(auto kmerSaved : kmerSet)
+		{
+			if(kmer == kmerSaved)
+			{
+				bloomFilterResultReal.push_back((bool)true);
+				setted = true;
+				break;
+			}
+		}
+		if(!setted)
+		{
+			bloomFilterResultReal.push_back((bool)false);
+		}
+	}
+	return bloomFilterResultReal;
+}
+
+
 int main (int argc, char *argv[]) 
 {
 	srand(time(NULL));
-	size_t numOfCells = 1024*1024*20;
+	//size_t numOfCells = 1024*1024*20;
+	size_t numOfCells = 10000*10000;
 	int numOfHashes = 2;
 	int testSetSize = 20;
-	//bool bloomFilterResult = (bool)malloc(testSetSize*sizeof(bool));
+	//bool bloomFilterResult = (bool)malloc(testSetSize*sizeof(bool));  
 	std::unordered_set<string> kmerSet;
 	vector<string> kmerSetTest;
 	if(argc < 3) {
@@ -92,25 +132,27 @@ int main (int argc, char *argv[])
 
 	FastaParser fp(fastaFile, K);
 	kmerSet = fp.parseKmers();
-	
-
-	cout<<"*******Classic Bloom Filter*******"<<endl;
 
 	bf::basic_bloom_filter bloomFilter(
 		bf::make_hasher(numOfHashes), numOfCells);
+
 	for (auto kmer : kmerSet)
 		bloomFilter.add(kmer);
+
+	cout<<"*******Classic Bloom Filter*******"<<endl;
+
 	cout << "Starting generating test kmers." << endl;
 	kmerSetTest = generateTestKmerSet(kmerSet, testSetSize, K);
+
 	size_t result;
-	
-	std::vector<bool> bloomFilterResult;
+	vector<bool> bloomFilterResult;
+	vector<bool> bloomFilterResultReal;
 
 	for (auto kmer : kmerSetTest){
 		result = bloomFilter.lookup(kmer);
 		bloomFilterResult.push_back((bool)result);
 	}
-	
+
 	int br = 0;
 	for(bool res : bloomFilterResult)
 	{
@@ -118,6 +160,16 @@ int main (int argc, char *argv[])
 		cout << br<<": " << res << endl;
 	}
 
+	bloomFilterResultReal = compareTestKmerWithSavedKmers(kmerSet, kmerSetTest);
+
+	for(bool result : bloomFilterResultReal)
+	{
+		cout<<"stvarniRez:"<<result<<endl;
+	}
+
+	float FPrate;
+	FPrate = falsePositiveRate(bloomFilterResult, bloomFilterResultReal);
+	cout << "fp rate:" << FPrate << "%" << endl;
 
 	return 0;
 }
