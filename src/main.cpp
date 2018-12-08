@@ -157,9 +157,9 @@ int main (int argc, char *argv[])
 {
 	srand(time(NULL));
 	//size_t numOfCells = 1024*1024*20;
-	size_t numOfCells = 10000*10000;
+	size_t numOfCells = 100*10000;
 	int numOfHashes = 2;
-	int testSetSize = 500;
+	int testSetSize = 100;
 
 	//bool bloomFilterResult = (bool)malloc(testSetSize*sizeof(bool));  
 	unordered_set<string> kmerSet;

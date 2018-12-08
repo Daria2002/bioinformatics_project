@@ -36,18 +36,23 @@ std::unordered_set<string> FastaParser::parseKmers()
 
 		const char* c_line = current_line.c_str();
 		
-		for (int j = 1; j<K; j+=1)
+		if(counter>0)
 		{
-			char* newKmer = (char*)malloc(K*sizeof(char));
-			strncpy(newKmer, help+j-1, K-j);
-			strncat(newKmer, c_line+K-j, j);
-			string* newKmerString = new string(newKmer);
-			if (!kmerSet.insert(*newKmerString).second)
+			for (int j = 1; j<K; j+=1)
 			{
-				free(newKmer);
-				free(newKmerString);
+				char* newKmer = (char*)malloc(K*sizeof(char));
+				strncpy(newKmer, help+j-1, K-j);
+				strncat(newKmer, c_line+K-j, j);
+				string* newKmerString = new string(newKmer);
+				cout<<"kmer:"<<*newKmerString<<endl;
+				if (!kmerSet.insert(*newKmerString).second)
+				{
+					free(newKmer);
+					free(newKmerString);
+				}
 			}
 		}
+		
 
 		for (int i = 0; i < current_line.size()-K; i += 1)
 		{ 
@@ -56,6 +61,7 @@ std::unordered_set<string> FastaParser::parseKmers()
 			//cout << newKmer2 << endl;
 			string* newKmerString2 = new string(newKmer2);
 			// Try to insert it, if not successful, free the memory
+			//cout<<"kmer:"<<*newKmerString2<<endl;
 			if (!kmerSet.insert(*newKmerString2).second){
 				free(newKmer2);
 				free(newKmerString2);
