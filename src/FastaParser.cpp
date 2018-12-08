@@ -18,7 +18,7 @@ FastaParser::~FastaParser()
 std::unordered_set<string> FastaParser::parseKmers()
 {
 	cout << "FastaParser::Parse() - starting to parse file..." << endl;
-	char* help = (char*)malloc((K-1) * sizeof(char));
+	char* help = (char*)calloc((K-1), sizeof(char));
 	string current_line;
 	int counter = 0;
 	while (getline(fastaStream, current_line))
@@ -40,11 +40,10 @@ std::unordered_set<string> FastaParser::parseKmers()
 		{
 			for (int j = 1; j<K; j+=1)
 			{
-				char* newKmer = (char*)malloc(K*sizeof(char));
+				char* newKmer = (char*)calloc(K, sizeof(char));
 				strncpy(newKmer, help+j-1, K-j);
 				strncat(newKmer, c_line+K-j, j);
 				string* newKmerString = new string(newKmer);
-				cout<<"kmer:"<<*newKmerString<<endl;
 				if (!kmerSet.insert(*newKmerString).second)
 				{
 					free(newKmer);
@@ -56,7 +55,7 @@ std::unordered_set<string> FastaParser::parseKmers()
 
 		for (int i = 0; i < current_line.size()-K; i += 1)
 		{ 
-			char* newKmer2 = (char*)malloc(K * sizeof(char));
+			char* newKmer2 = (char*)calloc(K, sizeof(char));
 			strncpy(newKmer2, c_line+i, K);
 			//cout << newKmer2 << endl;
 			string* newKmerString2 = new string(newKmer2);
