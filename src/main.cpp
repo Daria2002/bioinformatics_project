@@ -33,18 +33,14 @@ vector<string> makeRightNeighbours(string kmer)
 	for(char possibleChar : firstCharCombinations)
 	{	
 		makeNeighbour = kmer[1];
-		for (int i=2; i<kmer.size()-1; i++)
+		for (int i=2; i<kmer.size(); i++)
 		{
 			makeNeighbour+=kmer[i];
 		}
 
 		makeNeighbour += possibleChar;
 		rightNeighbours.push_back(makeNeighbour);
-	}/*
-	for (string el : rightNeighbours)
-	{
-		cout<<"element u desnim susjedima:"<<el<<endl;
-	}*/
+	}
 	return rightNeighbours;
 }
 
@@ -61,11 +57,12 @@ vector<string> makeLeftNeighbours(string kmer)
 			makeNeighbour+=kmer[i];
 		}
 		leftNeighbours.push_back(makeNeighbour);
-	}/*
+	}
+	cout<<"kmer"<<kmer<<endl;
 	for (string el : leftNeighbours)
 	{
 		cout<<"element u lijevim susjedima:"<<el<<endl;
-	}*/
+	}
 	return leftNeighbours;
 }
 
