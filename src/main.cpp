@@ -133,9 +133,9 @@ float falsePositiveRate(vector<bool> bloomFilterResult, vector<bool> bloomFilter
 vector<bool> compareTestKmerWithSavedKmers(unordered_set<string> kmerSet, vector<string> kmerSetTest)
 {
 	vector<bool> bloomFilterResultReal;
+	bool setted = false;
 	for(auto kmer : kmerSetTest)
 	{
-		bool setted = false;
 		for(auto kmerSaved : kmerSet)
 		{
 			if(kmer == kmerSaved)
@@ -149,6 +149,8 @@ vector<bool> compareTestKmerWithSavedKmers(unordered_set<string> kmerSet, vector
 		{
 			bloomFilterResultReal.push_back((bool)false);
 		}
+		else
+			setted = false;
 	}
 	return bloomFilterResultReal;
 }
@@ -159,7 +161,7 @@ int main (int argc, char *argv[])
 	//size_t numOfCells = 1024*1024*20;
 	size_t numOfCells = 100*10000;
 	int numOfHashes = 2;
-	int testSetSize = 100;
+	int testSetSize = 200;
 
 	//bool bloomFilterResult = (bool)malloc(testSetSize*sizeof(bool));  
 	unordered_set<string> kmerSet;

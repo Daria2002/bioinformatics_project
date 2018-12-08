@@ -42,7 +42,7 @@ std::unordered_set<string> FastaParser::parseKmers()
 			{
 				char* newKmer = (char*)calloc(K, sizeof(char));
 				strncpy(newKmer, help+j-1, K-j);
-				strncat(newKmer, c_line+K-j, j);
+				strncat(newKmer, c_line, j);
 				string* newKmerString = new string(newKmer);
 				if (!kmerSet.insert(*newKmerString).second)
 				{
@@ -53,7 +53,7 @@ std::unordered_set<string> FastaParser::parseKmers()
 		}
 		
 
-		for (int i = 0; i < current_line.size()-K; i += 1)
+		for (int i = 0; i < current_line.size()-K+1; i += 1)
 		{ 
 			char* newKmer2 = (char*)calloc(K, sizeof(char));
 			strncpy(newKmer2, c_line+i, K);
