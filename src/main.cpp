@@ -25,6 +25,28 @@ char randomKmerChar ()
 	}
 }
 
+// Single sequence sparsification
+vector<string> singleSequenceSparsification(vector<string> kmerSet, int s)
+{
+	vector<string> kmerSetSparse;
+	int i=0;
+	for(auto kmer : kmerSet)
+	{
+		if(i%(s+1)==0)
+		{
+			kmerSetSparse.push_back(kmer);
+		}
+		i++;
+	}
+
+	for (auto kmer : kmerSet)
+		cout<<"kmer:"<<kmer<<endl;
+	for(auto kmer : kmerSetSparse)
+		cout<<"Sparse:"<<kmer<<endl;
+
+	return kmerSetSparse; 
+}
+
 vector<string> makeRightNeighbours(string kmer)
 {
 	string firstCharCombinations = "ACTG";
@@ -57,12 +79,12 @@ vector<string> makeLeftNeighbours(string kmer)
 			makeNeighbour+=kmer[i];
 		}
 		leftNeighbours.push_back(makeNeighbour);
-	}
+	}/*
 	cout<<"kmer"<<kmer<<endl;
 	for (string el : leftNeighbours)
 	{
 		cout<<"element u lijevim susjedima:"<<el<<endl;
-	}
+	}*/
 	return leftNeighbours;
 }
 
@@ -155,10 +177,10 @@ vector<bool> compareTestKmerWithSavedKmers(unordered_set<string> kmerSet, vector
 int main (int argc, char *argv[]) 
 {
 	srand(time(NULL));
-	//size_t numOfCells = 1024*1024*20;
-	size_t numOfCells = 100*10000;
+	size_t numOfCells = 500;
+	//size_t numOfCells = 100*10000;
 	int numOfHashes = 2;
-	int testSetSize = 200;
+	int testSetSize = 20;
 
 	//bool bloomFilterResult = (bool)malloc(testSetSize*sizeof(bool));  
 	unordered_set<string> kmerSet;
@@ -198,9 +220,8 @@ int main (int argc, char *argv[])
 		bloomFilterResult.push_back((bool)result);
 	}
 
-	int stop_s=clock();/*
-	cout<<"start_s:"<<start_s<<endl;
-	cout<<"stop_s:"<<stop_s<<endl;*/
+	int stop_s=clock();
+
 	float timeClassicBloomFilter = (stop_s-start_s)/double(CLOCKS_PER_SEC)*1000;
 	cout << "Classic Bloom Filter-time: " << timeClassicBloomFilter << " s" << endl;
 
@@ -257,8 +278,10 @@ int main (int argc, char *argv[])
 	FPrateOneSided = falsePositiveRate(oneSidedResult, bloomFilterResultReal);
 	cout << "One-sided Bloom filter-fp rate:" << FPrateOneSided << "%" << endl;
 
-////______________________
-
+	// Edge kmers
+	std::vector<string> edgeKmersSet;
+	FastaParser fastaParserEdgeKmers(fastaFile, K);
+	edgeKmersSet = fastaParserEdgeKmers.edgeKmers();
 
 	cout<<"*******Two-sided k-mer Bloom filter*******"<<endl;
 	vector<bool> twoSidedResult;
@@ -284,6 +307,20 @@ int main (int argc, char *argv[])
 						neighbourInSet = true;
 						break;	
 					}
+
+					else if(bloomFilter.lookup(rightNeighbour) || bloomFilter.lookup(leftNeighbour))
+					{
+						for(string edgeKmer : edgeKmersSet)
+						{
+							if(*kmerToChange==edgeKmer)
+							{
+								twoSidedResult.push_back(true);
+								neighbourInSet = true;
+								break;
+							}
+						}
+					}
+
 				}
 				if(neighbourInSet)
 					break;
@@ -300,13 +337,21 @@ int main (int argc, char *argv[])
 	}
 	stop_s=clock();
 
-
 	float timeTwoSided = (stop_s-start_s)/double(CLOCKS_PER_SEC)*1000 + timeClassicBloomFilter;
 	cout << "Two-sided Bloom Filter-time: " << timeTwoSided << " s" << endl;
 
 	float FPrateTwoSided;
 	FPrateTwoSided = falsePositiveRate(twoSidedResult, bloomFilterResultReal);
 	cout << "Two-sided Bloom filter-fp rate:" << FPrateTwoSided << "%" << endl;
+	
+	cout<<"*******Sparse: hitting set*******"<<endl;
+	vector<bool> hittingSetResult;
+	//test set doesn't change
+	std::vector<string> x;
+	FastaParser fpHittingSet(fastaFile, K);
+	x = fpHittingSet.hittingSetSparsification();
 
+	
+	
 	return 0;
 }
