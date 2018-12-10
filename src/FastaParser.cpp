@@ -123,6 +123,7 @@ std::vector<string> FastaParser::bestIndexSparsification()
 	string current_line;
 	int counter = 0;
 	int s = 1;
+
 	std::vector<string> kmersToSave;
 	while(getline(fastaStream, current_line))
 	{
@@ -143,6 +144,7 @@ std::vector<string> FastaParser::bestIndexSparsification()
 			}
 		}
 		//save kmers from best Kr
+
 		else if(counter>0)
 		{	
 			unordered_map<int, int> bestIndexMap;
@@ -183,21 +185,31 @@ std::vector<string> FastaParser::bestIndexSparsification()
 					bestIndex = index->first;
 				}
 			}
-
-			std::vector<string> kmersAtBestIndex;
+			bool alreadyInSet;
 			for(int i=bestIndex; i<=current_line.size()-K; i=i+1)
 			{
+				alreadyInSet = false;
 				char* newKmer = (char*)calloc(K, sizeof(char));
 				strncpy(newKmer, c_line+i, K);
 
 				string* newKmerString = new string(newKmer);
-
-				kmersAtBestIndex.push_back(*newKmerString);
+				for(auto kmer : kmersToSave)
+				{
+					if(kmer == *newKmerString)
+					{
+						alreadyInSet = true;
+						break;
+					}
+				}
+				if(!alreadyInSet)
+					kmersToSave.push_back(*newKmerString);
 			}
 		}
 
 		counter++;
 	}
+	return kmersToSave;
+
 }
 
 vector<string> FastaParser::hittingSetSparsification()

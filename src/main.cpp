@@ -293,7 +293,6 @@ int main (int argc, char *argv[])
 		if(bloomFilterResult[i])
 		{
 			kmerToChange = &kmerSetTest[i];
-			//cout<<"kmerToChange:"<<*kmerToChange<<endl;
 			leftNeighbours = makeLeftNeighbours(*kmerToChange);
 			rightNeighbours = makeRightNeighbours(*kmerToChange);
 			
@@ -320,15 +319,12 @@ int main (int argc, char *argv[])
 							}
 						}
 					}
-
 				}
 				if(neighbourInSet)
 					break;
 			}
-
 			if(!neighbourInSet)
 				twoSidedResult.push_back(false);
-
 			else
 				neighbourInSet = false;
 		}
@@ -344,14 +340,12 @@ int main (int argc, char *argv[])
 	FPrateTwoSided = falsePositiveRate(twoSidedResult, bloomFilterResultReal);
 	cout << "Two-sided Bloom filter-fp rate:" << FPrateTwoSided << "%" << endl;
 	
-	cout<<"*******Sparse: hitting set*******"<<endl;
-	vector<bool> hittingSetResult;
+	cout<<"*******Sparse: Best index match per reat sparsification*******"<<endl;
+	vector<bool> bestIndexSetResult;
 	//test set doesn't change
-	std::vector<string> x;
-	FastaParser fpHittingSet(fastaFile, K);
-	x = fpHittingSet.hittingSetSparsification();
-
-	
+	std::vector<string> indexSet;
+	FastaParser fpIndexSet(fastaFile, K);
+	indexSet = fpIndexSet.bestIndexSparsification();
 	
 	return 0;
 }
