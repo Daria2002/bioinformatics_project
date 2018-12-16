@@ -114,13 +114,13 @@ std::vector<string> FastaParser::edgeKmers()
 	return edgeNeighbours;
 }	
 
-std::vector<string> FastaParser::bestIndexSparsification()
+vector<string> FastaParser::bestIndexSparsification()
 {
 	string current_line;
 	int counter = 0;
 	int s = 1;
 
-	std::vector<string> kmersToSave;
+	vector<string> kmersToSave;
 	bool alreadyInSet;
 	while(getline(fastaStream, current_line))
 	{
@@ -141,7 +141,10 @@ std::vector<string> FastaParser::bestIndexSparsification()
 				for(string kmer:kmersToSave)
 				{
 					if(kmer==*newKmerString)
+					{
 						alreadyInSet = true;
+						break;
+					}
 				}
 				if(alreadyInSet==true)
 					continue;
@@ -149,6 +152,7 @@ std::vector<string> FastaParser::bestIndexSparsification()
 			}
 		}
 		//save kmers from best Kr
+		//Kr is kmer set started at index r
 		else if(counter>0)
 		{	
 			unordered_map<int, int> bestIndexMap;
@@ -158,27 +162,24 @@ std::vector<string> FastaParser::bestIndexSparsification()
 
 			for(int startIndex = 0; startIndex<=K+1;	startIndex=startIndex+1)
 			{
-				std::vector<string> kmersAtBestIndex;
+				vector<string> kmersAtBestIndex;
 				for (int i = startIndex; i <= current_line.size()-K; i=i+1+s)
 				{ 
 					char* newKmer = (char*)calloc(K, sizeof(char));
 					strncpy(newKmer, c_line+i, K);
 					string* newKmerString = new string(newKmer);
 					kmersAtBestIndex.push_back(*newKmerString);
-				}
-
-				for(string kmer : kmersAtBestIndex)
-				{
 					for(string savedKmers : kmersToSave)
 					{
-						if(kmer==savedKmers)
+						if(*newKmerString==savedKmers)
 						{
 							bestIndexMap[startIndex]++;
 							break;
 						}
 					}
 				}
-				if(bestIndexMap[startIndex]>maxFreq)
+				
+				if(bestIndexMap[startIndex]>=maxFreq)
 				{
 					maxFreq = bestIndexMap[startIndex];
 					bestIndex = startIndex;
@@ -195,7 +196,7 @@ std::vector<string> FastaParser::bestIndexSparsification()
 				{
 					if(kmer == *newKmerString)
 					{
-						alreadyInSet = false;
+						alreadyInSet = true;
 						break;
 					}
 				}
@@ -260,14 +261,14 @@ vector<string> FastaParser::hittingSetSparsification()
 		bool skip = false;
 		vector<string> kmersToDelete;
 
-		//kmers that accurate more than once are saved in kmersToDelete
+		//kmers that appeared more than once are saved in kmersToDelete
 		for ( auto kmer = kmersAndNeighbours.begin(); kmer != kmersAndNeighbours.end(); kmer++)
 		{
 			if(kmer->second>1)
 				kmersToDelete.push_back(kmer->first);
 		}
 
-		//adding kmers that accurated only once in kmersToSave vector
+		//adding kmers that appeared only once in kmersToSave vector
 		for (int i = 0; i < current_line.size()-K+1; i++)
 		{ 
 			skip = false;
