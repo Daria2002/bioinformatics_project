@@ -40,6 +40,55 @@ vector<string> singleSequenceSparsification(vector<string> kmerSet, int s)
 	return kmerSetSparse; 
 }
 
+bool checkEdgeKmer (vector<string> edgeKmersSet, string kmer)
+{
+	for(auto edgeKmer:edgeKmersSet)
+	{
+		if(edgeKmer == kmer)
+			return true;
+	}
+	return false;
+}
+
+bool decidePresent(string kmer, bool contains_left, bool contains_right, vector<string> edgeKmersSet)
+{
+	if(contains_left || contains_right)
+	{
+		if(contains_right && contains_left)
+			return true;
+		else
+			return checkEdgeKmer(edgeKmersSet, kmer);
+	}
+	return false;
+}
+
+bool relaxedContainsNeighbours(string kmer, int leftDist, int rightDist)
+{
+	bool containsLeft;
+	bool containsRight;
+
+	
+	
+	return decidePresent(kmer, containsLeft, containsRight);
+}
+
+vector<bool> relaxedContains(vector<string> kmerTestSet, vector<string> edgeKmersSet, const bf::basic_bloom_filter bf)
+{
+	vector<bool> relaxedResults;
+	bool edgeKmer = false;
+	for(auto kmer : kmerTestSet)
+	{
+		edgeKmer = checkEdgeKmer(edgeKmersSet, kmer);
+		// if kmer is saved, search if kmer is in edgeKmersSet and check if neighbour/s are saved 
+		if(bf.lookup(kmer))
+		{
+
+		}
+	}
+
+	retur relaxedResults;
+}
+
 // Returns all combinations for right neighbours
 // e.g. if kmer is ACTG, right neighbours can be:
 // CTGX, where x={A,G,C,T}  
@@ -374,7 +423,7 @@ int main (int argc, char *argv[])
 	cout << "Sparse Bloom filter-fp rate:" << FPrateSparse << "%" << endl;
 */
 	cout<<"***************************************************************"<<endl;
-	cout<<"*******Sparse: Spasification via approximate hitting set, Relaxed*******"<<endl;
+	cout<<"***Sparse:Spasification via approximate hitting set, Relaxed***"<<endl;
 	cout<<"***************************************************************"<<endl;
 	vector<bool> hittingSetResult;
 	//test set doesn't change
@@ -387,16 +436,12 @@ int main (int argc, char *argv[])
 	for (auto kmer : hittingSet)
 		bloomFilterHittingSet.add(kmer);
 
-	std::vector<bool> hittingSetResults;
-
+	std::vector<bool> hittingSetRelaxedResults;
+	std::std::vector<bool> hittingSetStrictResults;
 	start_s=clock();
 
-	for (auto kmer : kmerSetTest)
-	{
-		result = bloomFilterHittingSet.lookup(kmer);
-		hittingSetResults.push_back((bool)result);
-
-	}
+	hittingSetRelaxedResults = relaxedContains(kmerSetTest, edgeKmersSet, bloomFilterHittingSet);
+	hittingSetStrictResults = strictContains(kmerSetTest, edgeKmersSet, bloomFilterHittingSet);
 
 	stop_s=clock();
 
@@ -405,7 +450,8 @@ int main (int argc, char *argv[])
 
 	bloomFilterResultReal = compareTestKmerWithSavedKmers(kmerSet, kmerSetTest);
 
-	float FPrateHittingSet;
+	float FPrateHittingSet;		hittingSetResults.push_back((bool)result);
+
 	FPrateHittingSet = falsePositiveRate(hittingSetResults, bloomFilterResultReal);
 	cout << "Hitting set Bloom filter-fp rate:" << FPrateHittingSet << "%" << endl;
 	
