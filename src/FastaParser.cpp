@@ -15,6 +15,7 @@ FastaParser::~FastaParser()
 {
 }
 
+// parse kmers from fasta file
 std::unordered_set<string> FastaParser::parseKmers()
 {
 	cout << "FastaParser::Parse() - starting to parse file..." << endl;
@@ -53,6 +54,7 @@ std::unordered_set<string> FastaParser::parseKmers()
 	return kmerSet;
 }
 
+// parse kmers from fasta file and returns kmer set in vector
 vector<string> FastaParser::parseKmersToVector()
 {
 	cout << "FastaParser::Parse() - starting to parse file..." << endl;
@@ -88,6 +90,9 @@ vector<string> FastaParser::parseKmersToVector()
 	return kmerVector;
 }
 
+// save edge kmers in vector
+// if kmer doesn't have right and left neighbour saved in bf, 
+// check if kmer is in egde kmers
 std::vector<string> FastaParser::edgeKmers()
 {
 	vector<string> edgeNeighbours;
@@ -114,6 +119,8 @@ std::vector<string> FastaParser::edgeKmers()
 	return edgeNeighbours;
 }	
 
+// best index sparsification takes kmers from best index
+// best index has largest number of kmers as already saved in kmer set
 vector<string> FastaParser::bestIndexSparsification()
 {
 	string current_line;
@@ -159,7 +166,7 @@ vector<string> FastaParser::bestIndexSparsification()
 			const char* c_line = current_line.c_str();
 			int maxFreq = 0;
 			int bestIndex = 0;
-
+			//take different indexes
 			for(int startIndex = 0; startIndex<=K+1;	startIndex=startIndex+1)
 			{
 				vector<string> kmersAtBestIndex;
@@ -169,6 +176,7 @@ vector<string> FastaParser::bestIndexSparsification()
 					strncpy(newKmer, c_line+i, K);
 					string* newKmerString = new string(newKmer);
 					kmersAtBestIndex.push_back(*newKmerString);
+					// compare kmer with already saved kmers
 					for(string savedKmers : kmersToSave)
 					{
 						if(*newKmerString==savedKmers)
@@ -178,7 +186,7 @@ vector<string> FastaParser::bestIndexSparsification()
 						}
 					}
 				}
-				
+				// compare number of already saved kmers with last maximum of same kmers
 				if(bestIndexMap[startIndex]>=maxFreq)
 				{
 					maxFreq = bestIndexMap[startIndex];
@@ -186,6 +194,7 @@ vector<string> FastaParser::bestIndexSparsification()
 				}
 			}
 
+			//add kmers from best index in kmers set
 			for(int i=bestIndex; i<=current_line.size()-K; i=i+s+1)
 			{
 				bool alreadyInSet = false;
@@ -245,6 +254,7 @@ unordered_map<string, int> makeMapWithKmersAndNeighbours(string sequence, int K)
 	return neighbours;
 }
 
+// takes neighbours that appear more then once in neighbour sets and delete that kmers from kmer set
 vector<string> FastaParser::hittingSetSparsification()
 {
 	vector<string> kmersToSave;
@@ -255,7 +265,9 @@ vector<string> FastaParser::hittingSetSparsification()
 		// If first character is '>' then omit the line
 		if (current_line.at(0) == '>')
 			continue;
-
+		// returns map with kmers and neighbours for each kmers
+		// kmer appeared as neighbours are map key and
+		// map value is how much each kmer appeared as neighbour
 		kmersAndNeighbours = makeMapWithKmersAndNeighbours(current_line, K);
 		const char* c_line = current_line.c_str();
 		bool skip = false;

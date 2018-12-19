@@ -26,6 +26,7 @@ char randomKmerChar ()
 }
 
 // Single sequence sparsification
+// Select every sth k-mer
 vector<string> singleSequenceSparsification(vector<string> kmerSet, int s)
 {
 	vector<string> kmerSetSparse;
@@ -33,15 +34,15 @@ vector<string> singleSequenceSparsification(vector<string> kmerSet, int s)
 	for(auto kmer : kmerSet)
 	{
 		if(i%(s+1)==0)
-		{
 			kmerSetSparse.push_back(kmer);
-		}
 		i++;
 	}
-
 	return kmerSetSparse; 
 }
 
+// Returns all combinations for right neighbours
+// e.g. if kmer is ACTG, right neighbours can be:
+// CTGX, where x={A,G,C,T}  
 vector<string> makeRightNeighbours(string kmer)
 {
 	string firstCharCombinations = "ACTG";
@@ -59,6 +60,7 @@ vector<string> makeRightNeighbours(string kmer)
 	return rightNeighbours;
 }
 
+// Returns all combinations for left neighbour
 vector<string> makeLeftNeighbours(string kmer)
 {
 	string firstCharCombinations = "ACTG";
@@ -75,6 +77,7 @@ vector<string> makeLeftNeighbours(string kmer)
 	return leftNeighbours;
 }
 
+// returns test set
 vector<string> generateTestKmerSet(unordered_set<string> kmerSet, int testSize, int K)
 {
 	vector<string> kmerSetVecor;
@@ -114,7 +117,7 @@ vector<string> generateTestKmerSet(unordered_set<string> kmerSet, int testSize, 
 	return testKmers;
 }
 
-
+// calculate false positive rate
 float falsePositiveRate(vector<bool> bloomFilterResult, vector<bool> bloomFilterResultReal)
 {
 	float FPrate = 0;
@@ -122,13 +125,21 @@ float falsePositiveRate(vector<bool> bloomFilterResult, vector<bool> bloomFilter
 	for (int i = 0; i < bloomFilterResult.size(); i++)
 	{
 		if(!(bloomFilterResult[i] == bloomFilterResultReal[i]))
+		{
+			if(bloomFilterResult[i]==0 and bloomFilterResultReal[i]==1)
+				cout<<"real=1, bf=0"<<endl;
 			FPrate++;
+		}
 	}
 
 	FPrate = (FPrate / bloomFilterResult.size())*100 ;
 	return FPrate;
 }
 
+//check if kmers in kmerSetTest are in kmerSet
+//kmerSet is set of all kmers that really exists in fasta file
+//kmerSet is seto of test kmers
+//function returns bool vector, where false means that kmer doesn't exist in fasta file and true that it exists
 vector<bool> compareTestKmerWithSavedKmers(unordered_set<string> kmerSet, vector<string> kmerSetTest)
 {
 	vector<bool> bloomFilterResultReal;
@@ -180,7 +191,6 @@ int main (int argc, char *argv[])
 
 	for (auto kmer : kmerSet)
 		bloomFilter.add(kmer);
-
 
 	cout << "Starting generating test kmers." << endl;
 	kmerSetTest = generateTestKmerSet(kmerSet, testSetSize, K);
@@ -364,7 +374,7 @@ int main (int argc, char *argv[])
 	cout << "Sparse Bloom filter-fp rate:" << FPrateSparse << "%" << endl;
 */
 	cout<<"***************************************************************"<<endl;
-	cout<<"*******Sparse: Spasification via approximate hitting set*******"<<endl;
+	cout<<"*******Sparse: Spasification via approximate hitting set, Relaxed*******"<<endl;
 	cout<<"***************************************************************"<<endl;
 	vector<bool> hittingSetResult;
 	//test set doesn't change
@@ -385,6 +395,7 @@ int main (int argc, char *argv[])
 	{
 		result = bloomFilterHittingSet.lookup(kmer);
 		hittingSetResults.push_back((bool)result);
+
 	}
 
 	stop_s=clock();
@@ -399,15 +410,16 @@ int main (int argc, char *argv[])
 	cout << "Hitting set Bloom filter-fp rate:" << FPrateHittingSet << "%" << endl;
 	
 	cout<<"***************************************************************"<<endl;
-	cout<<"*******Sparse: Single Sequence Sparsification*******"<<endl;
+	cout<<"********Sparse: Single Sequence Sparsification, Relaxed********"<<endl;
 	cout<<"***************************************************************"<<endl;
 	vector<bool> singleSequenceSparsificationSetResult;
 	//test set doesn't change
 	vector<string> singleSequenceSparsificationSet;
 	FastaParser fpSequenceSparsificationSet(fastaFile, K);
 	vector<string> kmerSetVecor;
+	int s=2;
 	kmerSetVecor = fpSequenceSparsificationSet.parseKmersToVector();
-	singleSequenceSparsificationSet = singleSequenceSparsification(kmerSetVecor, 2);
+	singleSequenceSparsificationSet = singleSequenceSparsification(kmerSetVecor, s);
 	bf::basic_bloom_filter bloomFilterSequenceSparsificationSet(
 		bf::make_hasher(numOfHashes), numOfCells);
 
@@ -416,9 +428,12 @@ int main (int argc, char *argv[])
 
 	start_s=clock();
 
+
+	//TODO: add special checking for sparse... relaxed and strict
 	for (auto kmer : kmerSetTest)
 	{
 		result = bloomFilterSequenceSparsificationSet.lookup(kmer);
+		
 		singleSequenceSparsificationSetResult.push_back((bool)result);
 	}
 
@@ -426,8 +441,6 @@ int main (int argc, char *argv[])
 
 	float timeSequenceSparsification = (stop_s-start_s)/double(CLOCKS_PER_SEC)*1000;
 	cout << "Sequence Sparsification Bloom Filter-time: " << timeHittingSet << " s" << endl;
-
-	bloomFilterResultReal = compareTestKmerWithSavedKmers(kmerSet, kmerSetTest);
 
 	float FPrateSequenceSparsification;
 	FPrateSequenceSparsification = falsePositiveRate(singleSequenceSparsificationSetResult, bloomFilterResultReal);
