@@ -6,6 +6,7 @@
 #include <bf/all.hpp>
 #include "FastaParser.h"
 #include <stdlib.h>
+#include <math.h>
 
 using namespace std;
 
@@ -62,17 +63,126 @@ bool decidePresent(string kmer, bool contains_left, bool contains_right, vector<
 	return false;
 }
 
-bool relaxedContainsNeighbours(string kmer, int leftDist, int rightDist)
+bool containsSet(std::vector<string> kmerSet, const bf::basic_bloom_filter &bloomFilter)
 {
-	bool containsLeft;
-	bool containsRight;
-
-	
-	
-	return decidePresent(kmer, containsLeft, containsRight);
+	for(string kmer:kmerSet)
+	{
+		if(bloomFilter.lookup(kmer))
+			return true; 
+	}
+	return false;
 }
 
-vector<bool> relaxedContains(vector<string> kmerTestSet, vector<string> edgeKmersSet, const bf::basic_bloom_filter bf)
+string convertTo4Base(int numberInDecimal, int length)
+{
+	string numberIn4BaseInverse;
+	string numberIn4Base;
+	int remainder;
+	for(int i = 0; i<length; i++)
+	{
+		while(numberInDecimal>0)
+		{
+			remainder = numberInDecimal%4;
+			numberInDecimal = numberInDecimal/4;
+			numberIn4BaseInverse = numberIn4BaseInverse + std::to_string(remainder);
+		}
+		for(int j=numberIn4BaseInverse.size(); j<length; j++)
+			numberIn4BaseInverse = numberIn4BaseInverse + '0';
+	}
+	
+	for(int i=numberIn4BaseInverse.size()-1; i>=0; i--)
+		numberIn4Base += numberIn4BaseInverse.at(i);
+	return numberIn4Base;
+}
+
+std::vector<string> prefixOrSuffixCombinations(int length)
+{
+	int numberOfCombinations = pow(4, length);
+	std::vector<string> combinations;
+	string base4Number;
+	for(int i = 0; i<numberOfCombinations; i++)
+	{
+		base4Number = convertTo4Base(i, length);
+		string combination;
+		for(auto el:base4Number)
+		{
+			if(el=='0')
+				combination += 'A';
+			else if(el == '1')
+				combination += 'C';
+			else if(el == '2')
+				combination += 'T';
+			else if(el == '3')
+				combination += 'G';
+		}
+		combinations.push_back(combination);
+	}
+	return combinations;
+}
+
+std::vector<string> sDistantLeftNeighbourSet(string kmer, int leftDist)
+{
+	std::vector<string> neighbours;
+
+	for(int i = 1; i<=leftDist; i++)
+	{
+		// make prefixSet and base
+		// prefix set are all combinations of prefixes 
+		// base consists of first k-i element in kmer
+		std::vector<string> prefixSet = prefixOrSuffixCombinations(i);
+		string base = kmer.substr(0, kmer.size()-i);
+		for(auto prefix:prefixSet)
+		{
+			neighbours.push_back(prefix + base);
+			cout<<"prefix je: "<<prefix<<endl;
+			cout<<"base je: "<<base<<endl;
+		}
+	}
+	return neighbours;
+}
+
+std::vector<string> sDistantRightNeighbourSet(string kmer, int rightDist)
+{
+	std::vector<string> neighbours;
+	for(int i = 1; i<=rightDist; i++) 
+	{
+		std::vector<string> suffixSet = prefixOrSuffixCombinations(i);
+		string base = kmer.substr(i, kmer.size()-i);
+		for(auto suffix:suffixSet)
+		{
+			neighbours.push_back(base+suffix);
+			cout<<"suffix: "<<suffix<<endl;
+			cout<<"base je : "<<base<<endl;
+		}
+	}
+	return neighbours;
+}
+
+bool relaxedContainsNeighbours(string kmer, int leftDist, int rightDist, const bf::basic_bloom_filter &bloomFilter, std::vector<string> edgeKmersSet)
+{
+	bool containsLeft=false;
+	bool containsRight=false;
+
+	for (int i = 0; i <= leftDist; i++)
+	{
+		if(containsSet(sDistantLeftNeighbourSet(kmer, i), bloomFilter))
+		{
+			containsLeft = true;
+			break;
+		}
+	}
+	for(int j=0; j<=rightDist; j++)
+	{
+		if(containsRight = containsSet(sDistantRightNeighbourSet(kmer, j), bloomFilter))
+		{
+			containsRight = true;
+			break;
+		}
+	}
+	return decidePresent(kmer, containsLeft, containsRight, edgeKmersSet);
+}
+
+vector<bool> relaxedContains(vector<string> kmerTestSet, vector<string> edgeKmersSet, const bf::basic_bloom_filter &bloomFilter, int s)
 {
 	vector<bool> relaxedResults;
 	bool edgeKmer = false;
@@ -80,13 +190,16 @@ vector<bool> relaxedContains(vector<string> kmerTestSet, vector<string> edgeKmer
 	{
 		edgeKmer = checkEdgeKmer(edgeKmersSet, kmer);
 		// if kmer is saved, search if kmer is in edgeKmersSet and check if neighbour/s are saved 
-		if(bf.lookup(kmer))
+		if(bloomFilter.lookup(kmer))
+			relaxedResults.push_back(relaxedContainsNeighbours(kmer, s, s, bloomFilter, edgeKmersSet));
+		else
 		{
-
+			for(int i=0; i <= s-1; i++)
+				relaxedResults.push_back(relaxedContainsNeighbours(kmer, i, s-(i+1), bloomFilter,edgeKmersSet));
 		}
 	}
 
-	retur relaxedResults;
+	return relaxedResults;
 }
 
 // Returns all combinations for right neighbours
@@ -235,11 +348,11 @@ int main (int argc, char *argv[])
 	FastaParser fp(fastaFile, K);
 	kmerSet = fp.parseKmers();
 
-	bf::basic_bloom_filter bloomFilter(
-		bf::make_hasher(numOfHashes), numOfCells);
+	bf::basic_bloom_filter *bloomFilter;
+	bloomFilter = new bf::basic_bloom_filter(bf::make_hasher(numOfHashes), numOfCells);
 
 	for (auto kmer : kmerSet)
-		bloomFilter.add(kmer);
+		bloomFilter->add(kmer);
 
 	cout << "Starting generating test kmers." << endl;
 	kmerSetTest = generateTestKmerSet(kmerSet, testSetSize, K);
@@ -253,10 +366,7 @@ int main (int argc, char *argv[])
 	int start_s=clock();
 
 	for (auto kmer : kmerSetTest)
-	{
-		result = bloomFilter.lookup(kmer);
-		bloomFilterResult.push_back((bool)result);
-	}
+		bloomFilterResult.push_back((bool)bloomFilter->lookup(kmer));
 
 	int stop_s=clock();
 
@@ -292,7 +402,7 @@ int main (int argc, char *argv[])
 			
 			for(int j=0; j<4; j++)
 			{
-				if(bloomFilter.lookup(leftNeighbours[j]) || bloomFilter.lookup(rightNeighbours[j]))
+				if(bloomFilter->lookup(leftNeighbours[j]) || bloomFilter->lookup(rightNeighbours[j]))
 				{
 					oneSidedResult.push_back(true);
 					neighbourInSet = true;
@@ -342,7 +452,7 @@ int main (int argc, char *argv[])
 			{
 				for(auto rightNeighbour : rightNeighbours)
 				{
-					if(bloomFilter.lookup(rightNeighbour) && bloomFilter.lookup(leftNeighbour))
+					if(bloomFilter->lookup(rightNeighbour) && bloomFilter->lookup(leftNeighbour))
 					{
 						twoSidedResult.push_back(true);
 						neighbourInSet = true;
@@ -350,7 +460,7 @@ int main (int argc, char *argv[])
 					}
 					// if only one neighbour is in set, check if kmer is in edgeKmersSet
 					// kmers in edgeKmersSet should have only one neighbour saved
-					else if(bloomFilter.lookup(rightNeighbour) || bloomFilter.lookup(leftNeighbour))
+					else if(bloomFilter->lookup(rightNeighbour) || bloomFilter->lookup(leftNeighbour))
 					{
 						for(string edgeKmer : edgeKmersSet)
 						{
@@ -384,7 +494,8 @@ int main (int argc, char *argv[])
 	float FPrateTwoSided;
 	FPrateTwoSided = falsePositiveRate(twoSidedResult, bloomFilterResultReal);
 	cout << "Two-sided Bloom filter-fp rate:" << FPrateTwoSided << "%" << endl;
-	/*
+/*
+//zakom ovu metodu
 	cout<<"**************************************************************"<<endl;
 	cout<<"*******Sparse: Best index match per read sparsification*******"<<endl;
 	cout<<"**************************************************************"<<endl;
@@ -398,14 +509,14 @@ int main (int argc, char *argv[])
 		bf::make_hasher(numOfHashes), numOfCells);
 	
 	for (auto kmer : indexSet)
-		bloomFilterSparse.add(kmer);
+		bloomFilterSparse->add(kmer);
 
 	std::vector<bool> sparseResults;
 	start_s=clock();
 
 	for (auto kmer : kmerSetTest)
 	{
-		result = bloomFilterSparse.lookup(kmer);
+		result = bloomFilterSparse->lookup(kmer);
 		sparseResults.push_back((bool)result);
 	}
 
@@ -425,23 +536,24 @@ int main (int argc, char *argv[])
 	cout<<"***************************************************************"<<endl;
 	cout<<"***Sparse:Spasification via approximate hitting set, Relaxed***"<<endl;
 	cout<<"***************************************************************"<<endl;
-	vector<bool> hittingSetResult;
+
 	//test set doesn't change
 	std::vector<string> hittingSet;
 	FastaParser fpHittingSet(fastaFile, K);
 	hittingSet = fpHittingSet.hittingSetSparsification();
-	bf::basic_bloom_filter bloomFilterHittingSet(
-		bf::make_hasher(numOfHashes), numOfCells);
+
+	bf::basic_bloom_filter *bloomFilterHittingSet;
+	bloomFilterHittingSet = new bf::basic_bloom_filter(bf::make_hasher(numOfHashes), numOfCells);
 
 	for (auto kmer : hittingSet)
-		bloomFilterHittingSet.add(kmer);
-
-	std::vector<bool> hittingSetRelaxedResults;
-	std::std::vector<bool> hittingSetStrictResults;
+		bloomFilterHittingSet->add(kmer);
+	int s = 4;
+	vector<bool> hittingSetRelaxedResults;
+	vector<bool> hittingSetStrictResults;
 	start_s=clock();
 
-	hittingSetRelaxedResults = relaxedContains(kmerSetTest, edgeKmersSet, bloomFilterHittingSet);
-	hittingSetStrictResults = strictContains(kmerSetTest, edgeKmersSet, bloomFilterHittingSet);
+	hittingSetRelaxedResults = relaxedContains(kmerSetTest, edgeKmersSet, *bloomFilterHittingSet, s);
+	//hittingSetStrictResults = strictContains(kmerSetTest, edgeKmersSet, bloomFilterHittingSet);
 
 	stop_s=clock();
 
@@ -450,11 +562,11 @@ int main (int argc, char *argv[])
 
 	bloomFilterResultReal = compareTestKmerWithSavedKmers(kmerSet, kmerSetTest);
 
-	float FPrateHittingSet;		hittingSetResults.push_back((bool)result);
+	float FPrateHittingSet;
 
-	FPrateHittingSet = falsePositiveRate(hittingSetResults, bloomFilterResultReal);
+	FPrateHittingSet = falsePositiveRate(hittingSetRelaxedResults, bloomFilterResultReal);
 	cout << "Hitting set Bloom filter-fp rate:" << FPrateHittingSet << "%" << endl;
-	
+	/*
 	cout<<"***************************************************************"<<endl;
 	cout<<"********Sparse: Single Sequence Sparsification, Relaxed********"<<endl;
 	cout<<"***************************************************************"<<endl;
@@ -463,26 +575,18 @@ int main (int argc, char *argv[])
 	vector<string> singleSequenceSparsificationSet;
 	FastaParser fpSequenceSparsificationSet(fastaFile, K);
 	vector<string> kmerSetVecor;
-	int s=2;
 	kmerSetVecor = fpSequenceSparsificationSet.parseKmersToVector();
 	singleSequenceSparsificationSet = singleSequenceSparsification(kmerSetVecor, s);
-	bf::basic_bloom_filter bloomFilterSequenceSparsificationSet(
+	bf::basic_bloom_filter *bloomFilterSequenceSparsificationSet(
 		bf::make_hasher(numOfHashes), numOfCells);
 
 	for (auto kmer : singleSequenceSparsificationSet)
-		bloomFilterSequenceSparsificationSet.add(kmer);
+		bloomFilterSequenceSparsificationSet->add(kmer);
 
 	start_s=clock();
 
-
-	//TODO: add special checking for sparse... relaxed and strict
-	for (auto kmer : kmerSetTest)
-	{
-		result = bloomFilterSequenceSparsificationSet.lookup(kmer);
-		
-		singleSequenceSparsificationSetResult.push_back((bool)result);
-	}
-
+	singleSequenceSparsificationSetResult = relaxedContains(kmerSetTest, edgeKmersSet, *bloomFilterSequenceSparsificationSet, s);
+	
 	stop_s=clock();
 
 	float timeSequenceSparsification = (stop_s-start_s)/double(CLOCKS_PER_SEC)*1000;
@@ -493,6 +597,6 @@ int main (int argc, char *argv[])
 	cout << "Sequence sparsification Bloom filter-fp rate:" << FPrateSequenceSparsification << "%" << endl;
 
 
-
+*/
 	return 0;
 }
