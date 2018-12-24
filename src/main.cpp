@@ -119,7 +119,7 @@ std::vector<string> prefixOrSuffixCombinations(int length)
 	}
 	return combinations;
 }
-
+// this function is used only for relaxed method
 std::vector<string> sDistantLeftNeighbourSet(string kmer, int leftDist)
 {
 	std::vector<string> neighbours;
@@ -136,7 +136,7 @@ std::vector<string> sDistantLeftNeighbourSet(string kmer, int leftDist)
 	}
 	return neighbours;
 }
-
+// this function is used only for relaxed mothod
 std::vector<string> sDistantRightNeighbourSet(string kmer, int rightDist)
 {
 	std::vector<string> neighbours;
@@ -150,29 +150,62 @@ std::vector<string> sDistantRightNeighbourSet(string kmer, int rightDist)
 	return neighbours;
 }
 
+bool strictContainsNeighbours(string kmer, int leftDist, int rightDist, const bf::basic_bloom_filter &bloomFilter, std::vector<string> edgeKmersSet)
+{
+	vector<string> leftNeighbours;
+	vector<string> rightNeighbours;
+
+	vector<string> prefixSet = prefixOrSuffixCombinations(leftDist);
+		string baseLeft = kmer.substr(0, kmer.size()-leftDist);
+		for(auto prefix:prefixSet)
+			leftNeighbours.push_back(prefix + baseLeft);
+
+	vector<string> suffixSet = prefixOrSuffixCombinations(rightDist);
+		string baseRight = kmer.substr(rightDist, kmer.size()-rightDist);
+		for(auto suffix:suffixSet)
+			rightNeighbours.push_back(baseRight+suffix);
+
+	return decidePresent(kmer,
+		containsSet(leftNeighbours, bloomFilter),
+		containsSet(rightNeighbours, bloomFilter),
+		edgeKmersSet);
+}
+
 bool relaxedContainsNeighbours(string kmer, int leftDist, int rightDist, const bf::basic_bloom_filter &bloomFilter, std::vector<string> edgeKmersSet)
 {
-	bool containsLeft=false;
-	bool containsRight=false;
-	for (int i = 0; i <=leftDist; i++)
+	return decidePresent(kmer,
+		containsSet(sDistantLeftNeighbourSet(kmer, leftDist), bloomFilter),
+		containsSet(sDistantRightNeighbourSet(kmer, rightDist), bloomFilter),
+		edgeKmersSet);
+}
+
+vector<bool> strictContains(vector<string> kmerTestSet, vector<string> edgeKmersSet, const bf::basic_bloom_filter &bloomFilter, int s)
+{
+	vector<bool> strictResults;
+	bool kmerSaved=false;
+
+	for(auto kmer : kmerTestSet)
 	{
-		// check if bf contains at least one left neighbour
-		if(containsSet(sDistantLeftNeighbourSet(kmer, i), bloomFilter))
+		kmerSaved = false;
+		// if kmer is saved, search if kmer is in edgeKmersSet and check if neighbour/s are saved 
+		if(bloomFilter.lookup(kmer))
+			strictResults.push_back(strictContainsNeighbours(kmer, s+1, s+1, bloomFilter, edgeKmersSet));
+		else
 		{
-			containsLeft = true;
-			break;
+			for(int i=0; i <= s; i++)
+			{
+				if(strictContainsNeighbours(kmer, i, s-i+1, bloomFilter,edgeKmersSet))
+				{
+					strictResults.push_back(true);
+					kmerSaved=true;
+					break;
+				}
+			}
+			if(!kmerSaved)
+				strictResults.push_back(false);
 		}
 	}
-	for(int j=0; j<=rightDist; j++)
-	{
-		// check if bf contains at least on right neighbour
-		if(containsSet(sDistantRightNeighbourSet(kmer, j), bloomFilter))
-		{
-			containsRight = true;
-			break;
-		}
-	}
-	return decidePresent(kmer, containsLeft, containsRight, edgeKmersSet);
+	return strictResults;
 }
 
 vector<bool> relaxedContains(vector<string> kmerTestSet, vector<string> edgeKmersSet, const bf::basic_bloom_filter &bloomFilter, int s)
@@ -405,7 +438,6 @@ int main (int argc, char *argv[])
 		if(bloomFilterResult[i])
 		{
 			kmerToChange = &kmerSetTest[i];
-			//cout<<"kmerToChange:"<<*kmerToChange<<endl;
 			
 			leftNeighbours = makeLeftNeighbours(*kmerToChange);
 			rightNeighbours = makeRightNeighbours(*kmerToChange);
@@ -518,7 +550,7 @@ int main (int argc, char *argv[])
 
 	vector<bool> bestIndexSetResult;
 	//test set doesn't change
-	std::vector<string> indexSet;
+	vector<string> indexSet;
 	FastaParser fpIndexSet(fastaFile, K);
 	indexSet = fpIndexSet.bestIndexSparsification();
 	bf::basic_bloom_filter *bloomFilterSparse;
@@ -527,10 +559,12 @@ int main (int argc, char *argv[])
 	for (auto kmer : indexSet)
 		bloomFilterSparse->add(kmer);
 
-	std::vector<bool> sparseResults;
+	//vector<bool> bestIndexRelaxedResults;
+	vector<bool> bestIndexStrictResults;
 	start_s=clock();
 
-	sparseResults = relaxedContains(kmerSetTest, edgeKmersSet, *bloomFilterSparse, s);
+	//bestIndexRelaxedResults = relaxedContains(kmerSetTest, edgeKmersSet, *bloomFilterSparse, s);
+	bestIndexStrictResults = strictContains(kmerSetTest, edgeKmersSet, *bloomFilterSparse, s);
 
 	stop_s=clock();
 
@@ -540,12 +574,18 @@ int main (int argc, char *argv[])
 	//checking which kmers from kmerSetTest are in kmerSet
 	bloomFilterResultReal = compareTestKmerWithSavedKmers(kmerSet, kmerSetTest);
 
-	float FPrateSparse;
-	FPrateSparse = falsePositiveRate(sparseResults, bloomFilterResultReal);
-	cout << "Sparse Bloom filter-fp rate:" << FPrateSparse << "%" << endl;
+	float FPrateBestIndexRelaxed;
+	float FPrateBestIndexStrict;
 
-	outputFileStream << "Sparse Bloom Filter-time: " << timeSparse << " s" << endl;
-	outputFileStream << "Sparse Bloom filter-fp rate:" << FPrateSparse << "%" << endl;
+	//FPrateBestIndexRelaxed = falsePositiveRate(bestIndexRelaxedResults, bloomFilterResultReal);
+	FPrateBestIndexStrict = falsePositiveRate(bestIndexStrictResults, bloomFilterResultReal);
+
+	//cout << "Best index relaxed Bloom filter-fp rate:" << FPrateBestIndexRelaxed << "%" << endl;
+	cout << "Best index strict Bloom filter-fp rate:" << FPrateBestIndexStrict << "%" << endl;
+
+	outputFileStream << "Best index Bloom Filter-time: " << timeSparse << " s" << endl;
+	//outputFileStream << "Best index relaxed Bloom filter-fp rate:" << FPrateBestIndexRelaxed << "%" << endl;
+	outputFileStream << "Best index strict Bloom filter-fp rate:" << FPrateBestIndexStrict << "%" << endl;
 
 	cout<<"***************************************************************"<<endl;
 	cout<<"***Sparse:Spasification via approximate hitting set, Relaxed***"<<endl;
@@ -563,11 +603,11 @@ int main (int argc, char *argv[])
 		bloomFilterHittingSet->add(kmer);
 
 	vector<bool> hittingSetRelaxedResults;
-	vector<bool> hittingSetStrictResults;
+	//vector<bool> hittingSetStrictResults;
 	start_s=clock();
 
 	hittingSetRelaxedResults = relaxedContains(kmerSetTest, edgeKmersSet, *bloomFilterHittingSet, s);
-	//hittingSetStrictResults = strictContains(kmerSetTest, edgeKmersSet, bloomFilterHittingSet);
+	//hittingSetStrictResults = strictContains(kmerSetTest, edgeKmersSet, *bloomFilterHittingSet, s);
 
 	stop_s=clock();
 
@@ -576,18 +616,24 @@ int main (int argc, char *argv[])
 
 	bloomFilterResultReal = compareTestKmerWithSavedKmers(kmerSet, kmerSetTest);
 
-	float FPrateHittingSet;
+	float FPrateHittingSetRelaxed;
+	float FPrateHittingSetStrict;
 
-	FPrateHittingSet = falsePositiveRate(hittingSetRelaxedResults, bloomFilterResultReal);
-	cout << "Hitting set Bloom filter-fp rate:" << FPrateHittingSet << "%" << endl;
+	FPrateHittingSetRelaxed = falsePositiveRate(hittingSetRelaxedResults, bloomFilterResultReal);
+	//FPrateHittingSetStrict = falsePositiveRate(hittingSetStrictResults, bloomFilterResultReal);
+
+	cout << "Hitting set relaxed Bloom filter-fp rate:" << FPrateHittingSetRelaxed << "%" << endl;
+	//cout << "Hitting set strict Bloom filter-fp rate:" << FPrateHittingSetStrict << "%" << endl;
 	
 	outputFileStream << "Hitting set Bloom Filter-time: " << timeHittingSet << " s" << endl;
-	outputFileStream << "Hitting set Bloom filter-fp rate:" << FPrateHittingSet << "%" << endl;
+	outputFileStream << "Hitting set relaxed Bloom filter-fp rate:" << FPrateHittingSetRelaxed << "%" << endl;
+	//outputFileStream << "Hitting set strict Bloom filter-fp rate:" << FPrateHittingSetStrict << "%" << endl;
 
 	cout<<"***************************************************************"<<endl;
 	cout<<"********Sparse: Single Sequence Sparsification, Relaxed********"<<endl;
 	cout<<"***************************************************************"<<endl;
-	vector<bool> singleSequenceSparsificationSetResult;
+	vector<bool> singleSequenceSparsificationSetRelaxedResult;
+	vector<bool> singleSequenceSparsificationSetStrictResult;
 	//test set doesn't change
 	vector<string> singleSequenceSparsificationSet;
 	FastaParser fpSequenceSparsificationSet(fastaFile, K);
@@ -602,20 +648,25 @@ int main (int argc, char *argv[])
 
 	start_s=clock();
 
-	singleSequenceSparsificationSetResult = relaxedContains(kmerSetTest, edgeKmersSet, *bloomFilterSequenceSparsificationSet, s);
-	
+	singleSequenceSparsificationSetRelaxedResult = relaxedContains(kmerSetTest, edgeKmersSet, *bloomFilterSequenceSparsificationSet, s);
+	singleSequenceSparsificationSetStrictResult = strictContains(kmerSetTest, edgeKmersSet, *bloomFilterSequenceSparsificationSet, s);
+
 	stop_s=clock();
 
 	float timeSequenceSparsification = (stop_s-start_s)/double(CLOCKS_PER_SEC)*1000;
 
-	float FPrateSequenceSparsification;
-	FPrateSequenceSparsification = falsePositiveRate(singleSequenceSparsificationSetResult, bloomFilterResultReal);
-	
+	float FPrateSequenceSparsificationRelaxed;
+	FPrateSequenceSparsificationRelaxed = falsePositiveRate(singleSequenceSparsificationSetRelaxedResult, bloomFilterResultReal);
+	float FPrateSequenceSparsificationStrict;
+	FPrateSequenceSparsificationStrict = falsePositiveRate(singleSequenceSparsificationSetStrictResult, bloomFilterResultReal);
+
 	cout << "Sequence Sparsification Bloom Filter-time: " << timeSequenceSparsification << " s" << endl;
-	cout << "Sequence sparsification Bloom filter-fp rate:" << FPrateSequenceSparsification << "%" << endl;
+	cout << "Sequence sparsification relaxed Bloom filter-fp rate:" << FPrateSequenceSparsificationRelaxed << "%" << endl;
+	cout << "Sequence sparsification strict Bloom filter-fp rate:" << FPrateSequenceSparsificationStrict << "%" << endl;
 
 	outputFileStream << "Sequence Sparsification Bloom Filter-time: " << timeSequenceSparsification << " s" << endl;
-	outputFileStream << "Sequence sparsification Bloom filter-fp rate:" << FPrateSequenceSparsification << "%" << endl;
+	outputFileStream << "Sequence sparsification relaxed Bloom filter-fp rate:" << FPrateSequenceSparsificationRelaxed << "%" << endl;
+	outputFileStream << "Sequence sparsification strict Bloom filter-fp rate:" << FPrateSequenceSparsificationStrict << "%" << endl;
 
 	outputFileStream.close();
 	return 0;
