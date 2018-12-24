@@ -338,14 +338,18 @@ int main (int argc, char *argv[])
 	//bool bloomFilterResult = (bool)malloc(testSetSize*sizeof(bool));  
 	unordered_set<string> kmerSet;
 	vector<string> kmerSetTest;
-	if(argc < 3) {
-		cerr << "Please write two arguments: path to fasta file an number of k-mers"
+	if(argc < 4) {
+		cerr << "Please write three arguments: path to fasta file, number of k-mers and output file"
 			<< endl;
 		return -1;
 	}
 
 	int K = atoi(argv[2]);
 	string fastaFile = argv[1];
+	string outputFile = argv[3];
+
+	ofstream outputFileStream;
+	outputFileStream.open(outputFile);
 
 	FastaParser fp(fastaFile, K);
 	kmerSet = fp.parseKmers();
@@ -373,13 +377,17 @@ int main (int argc, char *argv[])
 	int stop_s=clock();
 
 	float timeClassicBloomFilter = (stop_s-start_s)/double(CLOCKS_PER_SEC)*1000;
-	cout << "Classic Bloom Filter-time: " << timeClassicBloomFilter << " s" << endl;
 
 	bloomFilterResultReal = compareTestKmerWithSavedKmers(kmerSet, kmerSetTest);
 
 	float FPrateClassicBloomFilter;
 	FPrateClassicBloomFilter = falsePositiveRate(bloomFilterResult, bloomFilterResultReal);
+
+	cout << "Classic Bloom Filter-time: " << timeClassicBloomFilter << " s" << endl;
 	cout << "Classic Bloom filter-fp rate:" << FPrateClassicBloomFilter << "%" << endl;
+
+	outputFileStream << "Classic Bloom Filter-time: " << timeClassicBloomFilter << " s" << endl;
+	outputFileStream << "Classic Bloom filter-fp rate:" << FPrateClassicBloomFilter << "%" << endl;
 
 	cout<<"******************************************"<<endl;
 	cout<<"*******One-sided k-mer Bloom filter*******"<<endl;
@@ -434,6 +442,9 @@ int main (int argc, char *argv[])
 	std::vector<string> edgeKmersSet;
 	FastaParser fastaParserEdgeKmers(fastaFile, K);
 	edgeKmersSet = fastaParserEdgeKmers.edgeKmers();
+
+	outputFileStream << "One-sided Bloom Filter-time: " << timeOneSided << " s" << endl;
+	outputFileStream << "One-sided Bloom filter-fp rate:" << FPrateOneSided << "%" << endl;
 
 	cout<<"******************************************"<<endl;
 	cout<<"*******Two-sided k-mer Bloom filter*******"<<endl;
@@ -498,6 +509,9 @@ int main (int argc, char *argv[])
 	cout << "Two-sided Bloom filter-fp rate:" << FPrateTwoSided << "%" << endl;
 	int s = 1;
 
+	outputFileStream << "Two-sided Bloom Filter-time: " << timeTwoSided << " s" << endl;
+	outputFileStream << "Two-sided Bloom filter-fp rate:" << FPrateTwoSided << "%" << endl;
+
 	cout<<"**************************************************************"<<endl;
 	cout<<"*******Sparse: Best index match per read sparsification*******"<<endl;
 	cout<<"**************************************************************"<<endl;
@@ -530,6 +544,8 @@ int main (int argc, char *argv[])
 	FPrateSparse = falsePositiveRate(sparseResults, bloomFilterResultReal);
 	cout << "Sparse Bloom filter-fp rate:" << FPrateSparse << "%" << endl;
 
+	outputFileStream << "Sparse Bloom Filter-time: " << timeSparse << " s" << endl;
+	outputFileStream << "Sparse Bloom filter-fp rate:" << FPrateSparse << "%" << endl;
 
 	cout<<"***************************************************************"<<endl;
 	cout<<"***Sparse:Spasification via approximate hitting set, Relaxed***"<<endl;
@@ -565,6 +581,9 @@ int main (int argc, char *argv[])
 	FPrateHittingSet = falsePositiveRate(hittingSetRelaxedResults, bloomFilterResultReal);
 	cout << "Hitting set Bloom filter-fp rate:" << FPrateHittingSet << "%" << endl;
 	
+	outputFileStream << "Hitting set Bloom Filter-time: " << timeHittingSet << " s" << endl;
+	outputFileStream << "Hitting set Bloom filter-fp rate:" << FPrateHittingSet << "%" << endl;
+
 	cout<<"***************************************************************"<<endl;
 	cout<<"********Sparse: Single Sequence Sparsification, Relaxed********"<<endl;
 	cout<<"***************************************************************"<<endl;
@@ -588,11 +607,16 @@ int main (int argc, char *argv[])
 	stop_s=clock();
 
 	float timeSequenceSparsification = (stop_s-start_s)/double(CLOCKS_PER_SEC)*1000;
-	cout << "Sequence Sparsification Bloom Filter-time: " << timeSequenceSparsification << " s" << endl;
 
 	float FPrateSequenceSparsification;
 	FPrateSequenceSparsification = falsePositiveRate(singleSequenceSparsificationSetResult, bloomFilterResultReal);
+	
+	cout << "Sequence Sparsification Bloom Filter-time: " << timeSequenceSparsification << " s" << endl;
 	cout << "Sequence sparsification Bloom filter-fp rate:" << FPrateSequenceSparsification << "%" << endl;
 
+	outputFileStream << "Sequence Sparsification Bloom Filter-time: " << timeSequenceSparsification << " s" << endl;
+	outputFileStream << "Sequence sparsification Bloom filter-fp rate:" << FPrateSequenceSparsification << "%" << endl;
+
+	outputFileStream.close();
 	return 0;
 }
