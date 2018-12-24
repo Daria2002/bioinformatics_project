@@ -133,7 +133,6 @@ vector<string> FastaParser::bestIndexSparsification()
 	{
 		if (current_line.at(0) == '>')
 			continue;
-		cout<<"doslo je do linije u fasta file koja je br:"<<counter<<endl;
 		// save all kmers from first line
 		if (counter==0)
 		{
@@ -153,9 +152,8 @@ vector<string> FastaParser::bestIndexSparsification()
 						break;
 					}
 				}
-				if(alreadyInSet==true)
-					continue;
-				kmersToSave.push_back(*newKmerString);
+				if(alreadyInSet==false)
+					kmersToSave.push_back(*newKmerString);
 			}
 		}
 		//save kmers from best Kr
@@ -167,7 +165,8 @@ vector<string> FastaParser::bestIndexSparsification()
 			int maxFreq = 0;
 			int bestIndex = 0;
 			//take different indexes
-			for(int startIndex = 0; startIndex<=K+1;	startIndex=startIndex+1)
+			
+			for(int startIndex = 0; startIndex<=K+1; startIndex=startIndex+1)
 			{
 				vector<string> kmersAtBestIndex;
 				for (int i = startIndex; i <= current_line.size()-K; i=i+1+s)
@@ -193,7 +192,7 @@ vector<string> FastaParser::bestIndexSparsification()
 					bestIndex = startIndex;
 				}
 			}
-
+			
 			//add kmers from best index in kmers set
 			for(int i=bestIndex; i<=current_line.size()-K; i=i+s+1)
 			{
@@ -238,7 +237,6 @@ unordered_map<string, int> makeMapWithKmersAndNeighbours(string sequence, int K)
 		char* kmer = (char*)calloc(K, sizeof(char));
 		strncpy(kmer, c_line+i, K);
 		string* kmerString = new string(kmer);
-		//cout<<"leftNeighbour:"<<leftNeighbour<<" and current kmer: "<<*kmerString<<endl;
 		neighbours[*kmerString]++;
 	}
 
@@ -254,7 +252,7 @@ unordered_map<string, int> makeMapWithKmersAndNeighbours(string sequence, int K)
 	return neighbours;
 }
 
-// takes neighbours that appear more then once in neighbour sets and delete that kmers from kmer set
+// delete kmers that appears more then once in neighbour sets of other kmers
 vector<string> FastaParser::hittingSetSparsification()
 {
 	vector<string> kmersToSave;
@@ -276,7 +274,7 @@ vector<string> FastaParser::hittingSetSparsification()
 		//kmers that appeared more than once are saved in kmersToDelete
 		for ( auto kmer = kmersAndNeighbours.begin(); kmer != kmersAndNeighbours.end(); kmer++)
 		{
-			if(kmer->second>1)
+			if(kmer->second>2)
 				kmersToDelete.push_back(kmer->first);
 		}
 
