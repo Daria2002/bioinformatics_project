@@ -15,19 +15,19 @@ public:
 	FastaParser(string input_file, int K);
 	~FastaParser();
 
-	unordered_set<string> parseKmers();
-	vector<string> parseKmersToVector();
-	vector<string> hittingSetSparsification();
-	vector<string> edgeKmers();
-	vector<string> bestIndexSparsification();
+	unordered_set<string> ParseKmers();
+	vector<string> ParseKmersToVector();
+	vector<string> HittingSetSparsification();
+	vector<string> EdgeKmers();
+	vector<string> BestIndexSparsification();
 	
-	void printKmers();
+	void PrintKmers();
 
 private:
-	fstream fastaStream;
+	fstream fasta_stream;
 	int K;
-	unordered_set<string> kmerSet;
-	vector<string> kmerVector;
+	unordered_set<string> kmer_set;
+	vector<string> kmer_vector;
 };
 
 #endif
