@@ -24,14 +24,13 @@ unordered_set<string> FastaParser::ParseKmers() {
 			cout << "Skipping header: " << current_line << endl;
 			continue;
 		}
-
 		// ... if not header start to parse line
 		if (counter == 0)
 			cout << "Parsing fasta file"<< endl;
 
 		const char* kCLine = current_line.c_str();
 		
-		for (int i = 0; i < current_line.size() - K + 1; i += 1) { 
+		for (int i = 0; i < current_line.size() - K + 1; i++) { 
 			char* new_kmer = (char*)calloc(K, sizeof(char));
 			strncpy(new_kmer, kCLine + i, K);
 			string* new_kmer_string = new string(new_kmer);
@@ -41,7 +40,6 @@ unordered_set<string> FastaParser::ParseKmers() {
 				free(new_kmer_string);
 			}
 		}
-
 		counter++;
 	}
 	cout << "FastaParser::parse() - Finished parsing!" << endl;
@@ -59,21 +57,17 @@ vector<string> FastaParser::ParseKmersToVector() {
 			cout << "Skipping header: " << current_line << endl;
 			continue;
 		}
-
 		// ... if not header start to parse line
 		if (counter == 0)
 			cout << "Parsing fasta file" << endl;
-
 		const char* kCLine = current_line.c_str();
-		
-		for (int i = 0; i < current_line.size() - K + 1; i += 1) { 
+		for (int i = 0; i < current_line.size() - K + 1; i++) { 
 			char* new_kmer = (char*)calloc(K, sizeof(char));
 			strncpy(new_kmer, kCLine + i, K);
 			string* new_kmer_string = new string(new_kmer);
 			// Try to insert it, if not successful, free the memory
 			kmer_vector.push_back(*new_kmer_string);
 		}
-
 		counter++;
 	}
 	cout << "FastaParser::parse() - Finished parsing!" << endl;
@@ -91,9 +85,7 @@ std::vector<string> FastaParser::EdgeKmers()
 		// If first character is '>' then omit the line
 		if (current_line.at(0) == '>')
 			continue;
-
 		const char* kCLine = current_line.c_str();
-
 		//Counting how many times each kmer accurate in sequence
 		for (int i = 0; i < current_line.size() - K + 1; i++) { 
 			char* kmer = (char*)calloc(K, sizeof(char));
@@ -113,10 +105,9 @@ vector<string> FastaParser::BestIndexSparsification()
 	string current_line;
 	int counter = 0;
 	int s = 1;
-
 	vector<string> kmers_to_save;
 	bool already_in_set;
-	while(getline(fasta_stream, current_line)) {
+	while (getline(fasta_stream, current_line)) {
 		if (current_line.at(0) == '>')
 			continue;
 		// save all kmers from first line
@@ -138,16 +129,15 @@ vector<string> FastaParser::BestIndexSparsification()
 					kmers_to_save.push_back(*new_kmer_string);
 			}
 		}
-		//save kmers from best Kr
-		//Kr is kmer set started at index r
+		// save kmers from best Kr
+		// Kr is kmer set started at index r
 		else if (counter > 0) {	
 			unordered_map<int, int> best_index_map;
 			const char* kCLine = current_line.c_str();
 			int max_freq = 0;
 			int best_index = 0;
-			//take different indexes
-			
-			for (int start_index = 0; start_index <= K + 1; start_index = start_index + 1) {
+			// take different indexes
+			for (int start_index = 0; start_index <= K + 1; start_index++) {
 				vector<string> kmers_at_best_index;
 				for (int i = start_index; i <= current_line.size() - K; i = i + 1 + s) { 
 					char* new_kmer = (char*)calloc(K, sizeof(char));
@@ -181,18 +171,7 @@ vector<string> FastaParser::BestIndexSparsification()
 				char* new_kmer = (char*)calloc(K, sizeof(char));
 				strncpy(new_kmer, kCLine + i, K);
 				string* new_kmer_string = new string(new_kmer);
-				// it's much faster if duplicates are not checked
-				/*
-				for (auto kmer : kmers_to_save)
-				{
-					if (kmer == *new_kmer_string)
-					{
-						already_in_set = true;
-						break;
-					}
-				}
-				if (!already_in_set)*/
-					kmers_to_save.push_back(*new_kmer_string);
+				kmers_to_save.push_back(*new_kmer_string);
 			}
 		}
 		counter++;
@@ -200,8 +179,8 @@ vector<string> FastaParser::BestIndexSparsification()
 	return kmers_to_save;
 }
 
-//returns neighbours for every kmer in sequence
-//key in map is kmer, value in map are neighbours for kmer
+// returns neighbours for every kmer in sequence
+// key in map is kmer, value in map are neighbours for kmer
 unordered_map<string, int> MakeMapWithKmersAndNeighbours(string sequence, int K) {
 	unordered_map<string, int> neighbours;
 	string left_neighbour;
@@ -212,15 +191,15 @@ unordered_map<string, int> MakeMapWithKmersAndNeighbours(string sequence, int K)
 	strncpy(kmer, kCLine, K);
 	string* kmer_string = new string(kmer);
 	left_neighbour = *kmer_string;
-	//loop that adds left neighbours, starting from second kmer because first kmer doesn't have left neighbour
-	for (int i = 1; i < sequence.size() - K; i = i + 1) {
+	// loop that adds left neighbours, starting from second kmer because first kmer doesn't have left neighbour
+	for (int i = 1; i < sequence.size() - K; i++) {
 		char* kmer = (char*)calloc(K, sizeof(char));
 		strncpy(kmer, kCLine + i, K);
 		string* kmer_string = new string(kmer);
 		neighbours[*kmer_string]++;
 	}
-	//provjeri j>0
-	//loop that adds right neighbours, starting from last kmers 
+
+	// add right neighbours, starting from last kmers 
 	for (int j = sequence.size() - K; j >= 0; j = j - 1) {
 		char* rightNeighbour = (char*)calloc(K, sizeof(char));
 		//last kmer
@@ -238,7 +217,7 @@ vector<string> FastaParser::HittingSetSparsification()
 	string current_line;
 	int count = 0;
 	while (getline(fasta_stream, current_line)) {
-		count=count+1;
+		count++;
 		unordered_map<string, int> kmers_and_neighbours;
 		// If first character is '>' then omit the line
 		if (current_line.at(0) == '>')
@@ -249,7 +228,7 @@ vector<string> FastaParser::HittingSetSparsification()
 		kmers_and_neighbours = MakeMapWithKmersAndNeighbours(current_line, K);
 		const char* kCLine = current_line.c_str();
 		bool skip = false;
-		vector<string> kmers_to_delete;
+		vector<string> kmers_to_delete; // kmers_to_delete is set of kmers that won't be saved
 		int max_freq = 0;
 		//kmers that appeared more than once are saved in kmers_to_delete
 		for (auto kmer = kmers_and_neighbours.begin(); kmer != kmers_and_neighbours.end(); kmer++) {
@@ -262,7 +241,7 @@ vector<string> FastaParser::HittingSetSparsification()
 				kmers_to_delete.push_back(kmer -> first);
 		}
 			
-		//adding kmers that appeared only once in kmers_to_save vector
+		// adding kmers that appeared only once in kmers_to_save vector
 		for (int i = 0; i < current_line.size() - K + 1; i++) {
 			skip = false;
 			char* new_kmer = (char*)calloc(K, sizeof(char));
@@ -284,8 +263,7 @@ vector<string> FastaParser::HittingSetSparsification()
 	return kmers_to_save;
 }	
 
-void FastaParser::PrintKmers()
-{
+void FastaParser::PrintKmers() {
 	cout << K << "-mers are :" << endl;
 	int i = 0, kmer_size = kmer_set.size();
 	for (string kmer : kmer_set) {
