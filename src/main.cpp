@@ -320,10 +320,9 @@ vector<bool> CompareTestKmerWithSavedKmers(unordered_set<string> kmer_set, vecto
 
 int main (int argc, char *argv[]) {
 	srand(time(NULL));
-	size_t num_of_cells = 100000;
-	//size_t num_of_cells = 100*10000;
+	size_t num_of_cells;
 	int num_of_hashes = 2;
-	int test_set_size = 100;
+	int test_set_size = 1000;
 	//bool bloom_filter_result = (bool)malloc(test_set_size*sizeof(bool));  
 	unordered_set<string> kmer_set;
 	vector<string> kmer_set_test;
@@ -350,44 +349,42 @@ int main (int argc, char *argv[]) {
 	ofstream output_file_stream;
 	output_file_stream.open(output_file);
 
-	FastaParser fp(fasta_file, K);
-	kmer_set = fp.ParseKmers();
-	bf::basic_bloom_filter *kBloomFilter;
-	kBloomFilter = new bf::basic_bloom_filter(bf::make_hasher(num_of_hashes), num_of_cells);
-
 	cout << "**********************************" << endl;
 	cout << "*******Classic Bloom filter*******" << endl;
 	cout << "**********************************" << endl;
 	std::chrono::duration<double> duration;
-	auto start_s = chrono::system_clock::now();
 	auto memory = 0;
+	FastaParser fp(fasta_file, K);
+	kmer_set = fp.ParseKmers();
+	int number_of_kmers = kmer_set.size();
+	cout<<"kmer set size &&&&&&&&&&&&&&: "<<kmer_set.size()<<endl;
+	num_of_cells = number_of_kmers * 3;
+	cout<<"########: "<<num_of_cells<<endl;
+	cout<<"&&&&: "<<number_of_kmers<<endl;  
+	bf::basic_bloom_filter *kBloomFilter;
+	kBloomFilter = new bf::basic_bloom_filter(bf::make_hasher(num_of_hashes), num_of_cells);
 	for (auto kmer : kmer_set) {
 		memory += kmer.size() * sizeof(char);
 		kBloomFilter -> add(kmer);
 	}
-	auto stop_s = chrono::system_clock::now();
 	size_t result;
 	vector<bool> bloom_filter_result;
 	vector<bool> bloom_filter_result_real;
-	duration = stop_s - start_s;
-	auto classic_bloom_filter_initialization_time = duration.count();
 	cout << "Starting generating test kmers." << endl;
 	kmer_set_test = GenerateTestKmerSet(kmer_set, test_set_size, K);
-	start_s = chrono::system_clock::now();
+	auto start_s = chrono::system_clock::now();
 	for (auto kmer : kmer_set_test)
 		bloom_filter_result.push_back((bool)kBloomFilter -> lookup(kmer));
-	stop_s = chrono::system_clock::now();
+	auto stop_s = chrono::system_clock::now();
 	duration = stop_s - start_s;
 	auto time_classic_bloom_filter = duration.count();
 	bloom_filter_result_real = CompareTestKmerWithSavedKmers(kmer_set, kmer_set_test);
 	float fp_rate_classic_bloom_filter;
 	fp_rate_classic_bloom_filter = FalsePositiveRate(bloom_filter_result, bloom_filter_result_real);
 	cout << "Size of classic Bloom filter: " << memory << " Bytes" << endl;
-	cout << "Classic Bloom Filter-initialization time: " << classic_bloom_filter_initialization_time << " s" << endl;
 	cout << "Classic Bloom Filter-time: " << time_classic_bloom_filter << " s" << endl;
 	cout << "Classic Bloom filter-fp rate: " << fp_rate_classic_bloom_filter << " %" << endl;
 	output_file_stream << "Size of classic Bloom filter: " << memory << " Bytes" << endl;
-	output_file_stream << "Classic Bloom Filter-initialization time: " << classic_bloom_filter_initialization_time << " s" << endl;
 	output_file_stream << "Classic Bloom Filter-time: " << time_classic_bloom_filter << " s" << endl;
 	output_file_stream << "Classic Bloom filter-fp rate: " << fp_rate_classic_bloom_filter << " %" << endl;
 
@@ -399,23 +396,13 @@ int main (int argc, char *argv[]) {
 	vector<string> left_neighbours;
 	vector<string> right_neighbours;
 	bool neighbour_in_set;
-	auto initialization_time = 0;
-	auto make_neighbours_time = chrono::system_clock::now();
 	start_s = chrono::system_clock::now();
-
 	for (int i = 0; i < bloom_filter_result.size(); i++) {
 		if (bloom_filter_result[i]) {
 			kmer_to_change = &kmer_set_test[i];
-			
-			auto make_neighbour_time_start = chrono::system_clock::now();
-
 			left_neighbours = MakeLeftNeighbours(*kmer_to_change);
 			right_neighbours = MakeRightNeighbours(*kmer_to_change);
 			
-			auto make_neighbour_time_stop = chrono::system_clock::now();
-			duration = make_neighbour_time_stop - make_neighbour_time_start;
-			initialization_time += duration.count();
-
 			for (int j = 0; j < 4; j++) {
 				if (kBloomFilter -> lookup(left_neighbours[j]) || kBloomFilter -> lookup(right_neighbours[j])) {
 					one_sided_result.push_back(true);
@@ -435,15 +422,11 @@ int main (int argc, char *argv[]) {
 	float fp_rate_one_sided;
 	fp_rate_one_sided = FalsePositiveRate(one_sided_result, bloom_filter_result_real);
 	duration = stop_s - start_s;
-	auto time_one_sided = duration.count() + time_classic_bloom_filter - initialization_time;
-	// initialization time for one-sided bloom filter is ini time for classic bf + time for generating neighbours
-	initialization_time += classic_bloom_filter_initialization_time;
+	auto time_one_sided = duration.count() + time_classic_bloom_filter;
 	cout << "Size of one-sided Bloom filter: " << memory << " Bytes" << endl;
 	cout << "One-sided Bloom Filter-time: " << time_one_sided << " s" << endl;
-	cout << "One-sided Bloom Filter initialization time: " << initialization_time << " s" << endl;
 	cout << "One-sided Bloom filter-fp rate: " << fp_rate_one_sided << " %" << endl;
 	output_file_stream << "Size of one-sided Bloom filter: " << memory << " Bytes" << endl;
-	output_file_stream << "One-sided Bloom Filter-initialization: " << initialization_time << " s" << endl; 
 	output_file_stream << "One-sided Bloom Filter-time: " << time_one_sided << " s" << endl;
 	output_file_stream << "One-sided Bloom filter-fp rate: " << fp_rate_one_sided << " %" << endl;
 
@@ -454,19 +437,14 @@ int main (int argc, char *argv[]) {
 	vector<string> edge_kmers_set;
 	FastaParser fasta_parser_edge_kmers(fasta_file, K);
 	edge_kmers_set = fasta_parser_edge_kmers.EdgeKmers();
-	initialization_time = 0;
 	vector<bool> two_sided_result;
 	neighbour_in_set = false;
 	start_s = chrono::system_clock::now();
 	for (int i = 0; i < bloom_filter_result.size(); i++) {
 		if (bloom_filter_result[i]) {
 			kmer_to_change = &kmer_set_test[i];
-			auto make_neighbour_time_start = chrono::system_clock::now();
 			left_neighbours = MakeLeftNeighbours(*kmer_to_change);
 			right_neighbours = MakeRightNeighbours(*kmer_to_change);
-			auto make_neighbour_time_stop = chrono::system_clock::now();
-			duration = make_neighbour_time_stop - make_neighbour_time_start;
-			initialization_time += duration.count();
 			for (auto left_neighbour : left_neighbours) {
 				for (auto right_neighbour : right_neighbours) {
 					if (kBloomFilter -> lookup(right_neighbour) && kBloomFilter -> lookup(left_neighbour)) {
@@ -501,29 +479,24 @@ int main (int argc, char *argv[]) {
 	}
 	stop_s = chrono::system_clock::now();
 	duration = stop_s - start_s;
-	auto time_two_sided = duration.count() + time_classic_bloom_filter - initialization_time;
-	initialization_time += classic_bloom_filter_initialization_time;
+	auto time_two_sided = duration.count();
 	float fp_rate_two_sided;
 	fp_rate_two_sided = FalsePositiveRate(two_sided_result, bloom_filter_result_real);
 	int s = 1;
 	cout << "Size of two-sided Bloom filter: " << memory << " Bytes" << endl;
 	cout << "Two-sided Bloom Filter-time: " << time_two_sided << " s" << endl;
-	cout << "Two-sided Bloom filter-fp rate: " << fp_rate_two_sided << "%" << endl;
-	cout << "Two-sided Bloom Filter-initialization time: " << initialization_time << " s" << endl;
+	cout << "Two-sided Bloom filter-fp rate: " << fp_rate_two_sided << " %" << endl;
 	output_file_stream << "Size of two-sided Bloom filter: " << memory << " Bytes" << endl;
-	output_file_stream << "Two-sided Bloom Filter-initialization time: " << initialization_time << " s" << endl;
 	output_file_stream << "Two-sided Bloom Filter-time: " << time_two_sided << " s" << endl;
-	output_file_stream << "Two-sided Bloom filter-fp rate: " << fp_rate_two_sided << "%" << endl;
+	output_file_stream << "Two-sided Bloom filter-fp rate: " << fp_rate_two_sided << " %" << endl;
 
 	cout << "**************************************************************" << endl;
 	cout << "***Sparse: Best index match per read sparsification, strict***" << endl;
 	cout << "**************************************************************" << endl;
-	initialization_time = 0;
 	vector<bool> best_index_set_result;
 	//test set doesn't change
 	vector<string> best_index_set;
 	FastaParser fp_index_set(fasta_file, K);
-	start_s = chrono::system_clock::now();
 	memory = 0;
 	best_index_set = fp_index_set.BestIndexSparsification();
 	bf::basic_bloom_filter *bloom_filter_best_index;
@@ -532,9 +505,6 @@ int main (int argc, char *argv[]) {
 		memory += kmer.size() * sizeof(char);
 		bloom_filter_best_index -> add(kmer);
 	}
-	stop_s = chrono::system_clock::now();
-	duration = stop_s - start_s;
-	initialization_time = duration.count();
 	vector<bool> best_index_relaxed_results;
 	vector<bool> best_index_strict_results;
 	start_s = chrono::system_clock::now();
@@ -552,11 +522,9 @@ int main (int argc, char *argv[]) {
 	fp_rate_best_index_strict = FalsePositiveRate(best_index_strict_results, bloom_filter_result_real);
 	cout << "Size of Bloom filter using best index match: " << memory << " Bytes" << endl;
 	cout << "Best index Bloom Filter-time: " << time_sparse << " s" << endl;
-	cout << "Best index Bloom filter-initialization time: " << initialization_time << " s" << endl;
 	// cout << "Best index relaxed Bloom filter-fp rate: " << fp_rate_best_index_relaxed << " %" << endl;
 	cout << "Best index strict Bloom filter-fp rate: " << fp_rate_best_index_strict << " %" << endl;
 	output_file_stream << "Size of Bloom filter using best index match: " << memory << " Bytes" << endl;
-	output_file_stream << "Best index Bloom Filter-initialization time: " << initialization_time << " s" << endl;
 	output_file_stream << "Best index Bloom Filter-time: " << time_sparse << " s" << endl;
 	// output_file_stream << "Best index relaxed Bloom filter-fp rate: " << fp_rate_best_index_relaxed << " %" << endl;
 	output_file_stream << "Best index strict Bloom filter-fp rate: " << fp_rate_best_index_strict << " %" << endl;
@@ -564,7 +532,6 @@ int main (int argc, char *argv[]) {
 	cout << "***************************************************************" << endl;
 	cout << "***Sparse:Spasification via approximate hitting set, Relaxed***" << endl;
 	cout << "***************************************************************" << endl;
-	start_s = chrono::system_clock::now();
 	//test set doesn't change
 	vector<string> hitting_set;
 	memory = 0;
@@ -576,9 +543,6 @@ int main (int argc, char *argv[]) {
 		memory += kmer.size() * sizeof(char);
 		bloom_filter_hitting_set -> add(kmer);
 	}
-	stop_s = chrono::system_clock::now();
-	duration = stop_s - start_s;
-	initialization_time = duration.count();
 	vector<bool> hitting_set_selaxed_results;
 	vector<bool> hitting_set_strict_results;
 	start_s = chrono::system_clock::now();
@@ -594,14 +558,12 @@ int main (int argc, char *argv[]) {
 	fp_rate_hitting_set_relaxed = FalsePositiveRate(hitting_set_selaxed_results, bloom_filter_result_real);
 	// fp_rate_hitting_set_strict = FalsePositiveRate(hitting_set_strict_results, bloom_filter_result_real);
 	cout << "Size of Bloom filter using hitting set: " << memory << " Bytes" << endl;
-	cout << "Hitting set Bloom Filter-initialization time: " << initialization_time << " s" << endl;
 	cout << "Hitting set relaxed Bloom filter-fp rate: " << fp_rate_hitting_set_relaxed << " %" << endl;
 	// cout << "Hitting set strict Bloom filter-fp rate: " << fp_rate_hitting_set_strict << " %" << endl;
 	output_file_stream << "Size of Bloom filter using hitting set: " << memory << " Bytes" << endl;
-	output_file_stream << "Hitting set Bloom Filter-time: " << initialization_time << " s" << endl;
 	output_file_stream << "Hitting set Bloom Filter-time: " << timeHittingSet << " s" << endl;
-	output_file_stream << "Hitting set relaxed Bloom filter-fp rate: " << fp_rate_hitting_set_relaxed << "%" << endl;
-	// output_file_stream << "Hitting set strict Bloom filter-fp rate: " << fp_rate_hitting_set_strict << "%" << endl;
+	output_file_stream << "Hitting set relaxed Bloom filter-fp rate: " << fp_rate_hitting_set_relaxed << " %" << endl;
+	// output_file_stream << "Hitting set strict Bloom filter-fp rate: " << fp_rate_hitting_set_strict << " %" << endl;
 
 	cout << "***************************************************************" << endl;
 	cout << "********Sparse: Single Sequence Sparsification, Relaxed********" << endl;
@@ -610,7 +572,6 @@ int main (int argc, char *argv[]) {
 	vector<bool> single_sequence_sparsification_set_strict_result;
 	//test set doesn't change
 	vector<string> single_sequence_sparsification_set;
-	start_s = chrono::system_clock::now();
 	FastaParser fp_sequence_sparsification_set(fasta_file, K);
 	vector<string> kmer_set_vecor;
 	kmer_set_vecor = fp_sequence_sparsification_set.ParseKmersToVector();
@@ -622,9 +583,6 @@ int main (int argc, char *argv[]) {
 		memory += kmer.size() * sizeof(char);
 		bloom_filter_sequence_sparsification_set -> add(kmer);
 	}
-	stop_s = chrono::system_clock::now();
-	duration = stop_s - start_s;
-	initialization_time = duration.count();
 	start_s = chrono::system_clock::now();
 	single_sequence_sparsification_set_relaxed_result = RelaxedContains(kmer_set_test, edge_kmers_set, *bloom_filter_sequence_sparsification_set, s);
 	single_sequence_sparsification_set_strict_result = StrictContains(kmer_set_test, edge_kmers_set, *bloom_filter_sequence_sparsification_set, s);
@@ -636,12 +594,10 @@ int main (int argc, char *argv[]) {
 	float fp_rate_sequence_sparsification_strict;
 	fp_rate_sequence_sparsification_strict = FalsePositiveRate(single_sequence_sparsification_set_strict_result, bloom_filter_result_real);
 	cout << "Size of Bloom filter using single sequence sparsification: " << memory << " Bytes" << endl;
-	cout << "Sequence Sparsification Bloom Filter-initialization time: " << initialization_time << " s" << endl;
 	cout << "Sequence Sparsification Bloom Filter-time: " << time_sequence_sparsification << " s" << endl;
 	cout << "Sequence sparsification relaxed Bloom filter-fp rate: " << fp_rate_sequence_sparsification_relaxed << " %" << endl;
 	cout << "Sequence sparsification strict Bloom filter-fp rate: " << fp_rate_sequence_sparsification_strict << " %" << endl;
 	output_file_stream << "Size of Bloom filter using single sequence sparsification: " << memory << " Bytes" << endl;
-	output_file_stream << "Sequence Sparsification Bloom Filter-initialization time: " << initialization_time << " s" << endl;
 	output_file_stream << "Sequence Sparsification Bloom Filter-time: " << time_sequence_sparsification << " s" << endl;
 	output_file_stream << "Sequence sparsification relaxed Bloom filter-fp rate: " << fp_rate_sequence_sparsification_relaxed << " %" << endl;
 	output_file_stream << "Sequence sparsification strict Bloom filter-fp rate: " << fp_rate_sequence_sparsification_strict << " %" << endl;
