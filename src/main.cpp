@@ -279,8 +279,6 @@ float FalsePositiveRate(vector<bool> bloom_filter_result, vector<bool> bloom_fil
 	float fp_rate = 0;
 	for (int i = 0; i < bloom_filter_result.size(); i++) {
 		if (!(bloom_filter_result[i] == bloom_filter_result_real[i])) {
-			if (bloom_filter_result[i] == 0 and bloom_filter_result_real[i] == 1)
-				cout << "real=1, bf=0" << endl;
 			fp_rate++;
 		}
 	}
@@ -323,7 +321,6 @@ int main (int argc, char *argv[]) {
 	size_t num_of_cells;
 	int num_of_hashes = 2;
 	int test_set_size = 1000;
-	//bool bloom_filter_result = (bool)malloc(test_set_size*sizeof(bool));  
 	unordered_set<string> kmer_set;
 	vector<string> kmer_set_test;
 	if (argc < 3 || argc > 4) {
@@ -357,10 +354,7 @@ int main (int argc, char *argv[]) {
 	FastaParser fp(fasta_file, K);
 	kmer_set = fp.ParseKmers();
 	int number_of_kmers = kmer_set.size();
-	cout<<"kmer set size &&&&&&&&&&&&&&: "<<kmer_set.size()<<endl;
 	num_of_cells = number_of_kmers * 3;
-	cout<<"########: "<<num_of_cells<<endl;
-	cout<<"&&&&: "<<number_of_kmers<<endl;  
 	bf::basic_bloom_filter *kBloomFilter;
 	kBloomFilter = new bf::basic_bloom_filter(bf::make_hasher(num_of_hashes), num_of_cells);
 	for (auto kmer : kmer_set) {
@@ -508,7 +502,6 @@ int main (int argc, char *argv[]) {
 	vector<bool> best_index_relaxed_results;
 	vector<bool> best_index_strict_results;
 	start_s = chrono::system_clock::now();
-	//best_index_relaxed_results = RelaxedContains(kmer_set_test, edge_kmers_set, *bloom_filter_best_index, s);
 	best_index_strict_results = StrictContains(kmer_set_test, edge_kmers_set, *bloom_filter_best_index, s);
 	stop_s = chrono::system_clock::now();
 	duration = stop_s - start_s;
@@ -522,11 +515,9 @@ int main (int argc, char *argv[]) {
 	fp_rate_best_index_strict = FalsePositiveRate(best_index_strict_results, bloom_filter_result_real);
 	cout << "Size of Bloom filter using best index match: " << memory << " Bytes" << endl;
 	cout << "Best index Bloom Filter-time: " << time_sparse << " s" << endl;
-	// cout << "Best index relaxed Bloom filter-fp rate: " << fp_rate_best_index_relaxed << " %" << endl;
 	cout << "Best index strict Bloom filter-fp rate: " << fp_rate_best_index_strict << " %" << endl;
 	output_file_stream << "Size of Bloom filter using best index match: " << memory << " Bytes" << endl;
 	output_file_stream << "Best index Bloom Filter-time: " << time_sparse << " s" << endl;
-	// output_file_stream << "Best index relaxed Bloom filter-fp rate: " << fp_rate_best_index_relaxed << " %" << endl;
 	output_file_stream << "Best index strict Bloom filter-fp rate: " << fp_rate_best_index_strict << " %" << endl;
 
 	cout << "***************************************************************" << endl;
@@ -547,7 +538,6 @@ int main (int argc, char *argv[]) {
 	vector<bool> hitting_set_strict_results;
 	start_s = chrono::system_clock::now();
 	hitting_set_selaxed_results = RelaxedContains(kmer_set_test, edge_kmers_set, *bloom_filter_hitting_set, s);
-	// hitting_set_strict_results = StrictContains(kmer_set_test, edge_kmers_set, *bloom_filter_hitting_set, s);
 	stop_s = chrono::system_clock::now();
 	duration = stop_s - start_s;
 	float timeHittingSet = duration.count();
@@ -556,14 +546,11 @@ int main (int argc, char *argv[]) {
 	float fp_rate_hitting_set_relaxed;
 	float fp_rate_hitting_set_strict;
 	fp_rate_hitting_set_relaxed = FalsePositiveRate(hitting_set_selaxed_results, bloom_filter_result_real);
-	// fp_rate_hitting_set_strict = FalsePositiveRate(hitting_set_strict_results, bloom_filter_result_real);
 	cout << "Size of Bloom filter using hitting set: " << memory << " Bytes" << endl;
 	cout << "Hitting set relaxed Bloom filter-fp rate: " << fp_rate_hitting_set_relaxed << " %" << endl;
-	// cout << "Hitting set strict Bloom filter-fp rate: " << fp_rate_hitting_set_strict << " %" << endl;
 	output_file_stream << "Size of Bloom filter using hitting set: " << memory << " Bytes" << endl;
 	output_file_stream << "Hitting set Bloom Filter-time: " << timeHittingSet << " s" << endl;
 	output_file_stream << "Hitting set relaxed Bloom filter-fp rate: " << fp_rate_hitting_set_relaxed << " %" << endl;
-	// output_file_stream << "Hitting set strict Bloom filter-fp rate: " << fp_rate_hitting_set_strict << " %" << endl;
 
 	cout << "***************************************************************" << endl;
 	cout << "********Sparse: Single Sequence Sparsification, Relaxed********" << endl;
