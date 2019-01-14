@@ -1,0 +1,19 @@
+Size of classic Bloom filter: 1224250 Bytes
+Classic Bloom Filter-time: 0.000209829 s
+Classic Bloom filter-fp rate: 22 %
+Size of one-sided Bloom filter: 1224250 Bytes
+One-sided Bloom Filter-time: 0.0016032 s
+One-sided Bloom filter-fp rate: 21.2 %
+Size of two-sided Bloom filter: 1224250 Bytes
+Two-sided Bloom Filter-time: 0.44649 s
+Two-sided Bloom filter-fp rate: 13.9 %
+Size of Bloom filter using best index match: 638300 Bytes
+Best index Bloom Filter-time: 1.90282 s
+Best index strict Bloom filter-fp rate: 18.9 %
+Size of Bloom filter using hitting set: 1559070 Bytes
+Hitting set Bloom Filter-time: 1.5772 s
+Hitting set relaxed Bloom filter-fp rate: 61.2 %
+Size of Bloom filter using single sequence sparsification: 813540 Bytes
+Sequence Sparsification Bloom Filter-time: 1.89367 s
+Sequence sparsification relaxed Bloom filter-fp rate: 26 %
+Sequence sparsification strict Bloom filter-fp rate: 25.8 %

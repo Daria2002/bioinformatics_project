@@ -585,8 +585,8 @@ int main (int argc, char *argv[]) {
 	}
 	start_s = chrono::system_clock::now();
 	single_sequence_sparsification_set_relaxed_result = RelaxedContains(kmer_set_test, edge_kmers_set, *bloom_filter_sequence_sparsification_set, s);
-	single_sequence_sparsification_set_strict_result = StrictContains(kmer_set_test, edge_kmers_set, *bloom_filter_sequence_sparsification_set, s);
 	stop_s = chrono::system_clock::now();
+	single_sequence_sparsification_set_strict_result = StrictContains(kmer_set_test, edge_kmers_set, *bloom_filter_sequence_sparsification_set, s);
 	duration = stop_s - start_s;
 	auto time_sequence_sparsification = duration.count();
 	float fp_rate_sequence_sparsification_relaxed;
