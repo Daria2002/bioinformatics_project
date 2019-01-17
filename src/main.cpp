@@ -507,7 +507,7 @@ int main (int argc, char *argv[]) {
 	vector<string> best_index_set;
 	FastaParser fp_index_set(fasta_file, K);
 	memory = 0;
-	best_index_set = fp_index_set.BestIndexSparsification();
+	best_index_set = fp_index_set.-BestIndexSparsification();
 	bf::basic_bloom_filter *bloom_filter_best_index;
 	bloom_filter_best_index = new bf::basic_bloom_filter(bf::make_hasher(num_of_hashes), num_of_cells);
 	for (auto kmer : best_index_set) {
