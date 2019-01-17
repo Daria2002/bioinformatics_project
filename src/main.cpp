@@ -10,6 +10,7 @@
 #include "FastaParser.h"
 #include <stdlib.h>
 #include <math.h>
+#include <algorithm>
 #include <stdio.h>  /* defines FILENAME_MAX */
 // #define WINDOWS  /* uncomment this line to use it for windows.*/ 
 #ifdef WINDOWS
@@ -52,13 +53,16 @@ vector<string> SingleSequenceSparsification(vector<string> kmer_set, int s) {
 }
 
 bool CheckEdgeKmer(vector<string> edge_kmers_set, string kmer) {
-	for (auto edge_kmer : edge_kmers_set)
-		if (edge_kmer == kmer)
-			return true;
+	if (std::find(edge_kmers_set.begin(), edge_kmers_set.end(), kmer) != edge_kmers_set.end())
+		return true;
 	return false;
 }
 
-bool DecidePresent(string kmer, bool contains_left, bool contains_right, vector<string> edge_kmers_set) {
+bool DecidePresent(
+	string kmer, 
+	bool contains_left, 
+	bool contains_right, 
+	vector<string> edge_kmers_set) {
 	if (contains_left || contains_right) {
 		if (contains_right && contains_left)
 			return true;
@@ -142,7 +146,12 @@ vector<string> SDistantRightNeighbourSet(string kmer, int right_dist) {
 	return neighbours;
 }
 
-bool StrictContainsNeighbours(string kmer, int left_dist, int right_dist, const bf::basic_bloom_filter &kBloomFilter, vector<string> edge_kmers_set) {
+bool StrictContainsNeighbours(
+	string kmer,
+	int left_dist, 
+	int right_dist, 
+	const bf::basic_bloom_filter &kBloomFilter, 
+	vector<string> edge_kmers_set) {
 	vector<string> left_neighbours;
 	vector<string> right_neighbours;
 	vector<string> prefix_set = PrefixOrSuffixCombinations(left_dist);
@@ -159,14 +168,20 @@ bool StrictContainsNeighbours(string kmer, int left_dist, int right_dist, const 
 		edge_kmers_set);
 }
 
-bool RelaxedContainsNeighbours(string kmer, int left_dist, int right_dist, const bf::basic_bloom_filter &kBloomFilter, vector<string> edge_kmers_set) {
+bool RelaxedContainsNeighbours(
+	string kmer,
+	int left_dist, 
+	int right_dist, 
+	const bf::basic_bloom_filter &kBloomFilter, 
+	vector<string> edge_kmers_set) {
 	return DecidePresent(kmer,
 		ContainsSet(SDistantLeftNeighbourSet(kmer, left_dist), kBloomFilter),
 		ContainsSet(SDistantRightNeighbourSet(kmer, right_dist), kBloomFilter),
 		edge_kmers_set);
 }
 
-vector<bool> StrictContains(vector<string> kmer_test_set, vector<string> edge_kmers_set, const bf::basic_bloom_filter &kBloomFilter, int s) {
+vector<bool> StrictContains(vector<string> kmer_test_set,
+ vector<string> edge_kmers_set, const bf::basic_bloom_filter &kBloomFilter, int s) {
 	vector<bool> strict_results;
 	bool kmer_saved = false;
 	for (auto kmer : kmer_test_set) {
@@ -190,7 +205,11 @@ vector<bool> StrictContains(vector<string> kmer_test_set, vector<string> edge_km
 	return strict_results;
 }
 
-vector<bool> RelaxedContains(vector<string> kmer_test_set, vector<string> edge_kmers_set, const bf::basic_bloom_filter &kBloomFilter, int s) {
+vector<bool> RelaxedContains(
+	vector<string> kmer_test_set, 
+	vector<string> edge_kmers_set, 
+	const bf::basic_bloom_filter &kBloomFilter, 
+	int s) {
 	vector<bool> relaxed_results;
 	bool kmer_saved = false;
 	for (auto kmer : kmer_test_set) {
@@ -301,17 +320,10 @@ vector<bool> CompareTestKmerWithSavedKmers(unordered_set<string> kmer_set, vecto
 	vector<bool> bloom_filter_result_real;
 	bool setted = false;
 	for (auto kmer : kmer_set_test) {
-		for (auto kmer_saved : kmer_set) {
-			if (kmer == kmer_saved) {
-				bloom_filter_result_real.push_back((bool)true);
-				setted = true;
-				break;
-			}
-		}
-		if (!setted)
-			bloom_filter_result_real.push_back((bool)false);
+		if (kmer_set.find(kmer) != kmer_set.end())
+			bloom_filter_result_real.push_back((bool)true);
 		else
-			setted = false;
+			bloom_filter_result_real.push_back((bool)false);
 	}
 	return bloom_filter_result_real;
 }
@@ -324,7 +336,7 @@ int main (int argc, char *argv[]) {
 	unordered_set<string> kmer_set;
 	vector<string> kmer_set_test;
 	if (argc < 3 || argc > 4) {
-		cerr << "Please write three arguments: path to fasta file, number of k-mers and optionally output file"
+		cerr << "Please write three arguments: path to fasta file, k-mer length and optionally output file"
 			<< endl;
 		return -1;
 	}
@@ -354,7 +366,7 @@ int main (int argc, char *argv[]) {
 	FastaParser fp(fasta_file, K);
 	kmer_set = fp.ParseKmers();
 	int number_of_kmers = kmer_set.size();
-	num_of_cells = 1024*1024*32;
+	num_of_cells = 1024 * 1024 * 32;
 	bf::basic_bloom_filter *kBloomFilter;
 	kBloomFilter = new bf::basic_bloom_filter(bf::make_hasher(num_of_hashes), num_of_cells);
 	for (auto kmer : kmer_set) {
@@ -574,15 +586,19 @@ int main (int argc, char *argv[]) {
 		bloom_filter_sequence_sparsification_set -> add(kmer);
 	}
 	start_s = chrono::system_clock::now();
-	single_sequence_sparsification_set_relaxed_result = RelaxedContains(kmer_set_test, edge_kmers_set, *bloom_filter_sequence_sparsification_set, s);
+	single_sequence_sparsification_set_relaxed_result = RelaxedContains(
+		kmer_set_test, edge_kmers_set, *bloom_filter_sequence_sparsification_set, s);
 	stop_s = chrono::system_clock::now();
-	single_sequence_sparsification_set_strict_result = StrictContains(kmer_set_test, edge_kmers_set, *bloom_filter_sequence_sparsification_set, s);
+	single_sequence_sparsification_set_strict_result = StrictContains(
+		kmer_set_test, edge_kmers_set, *bloom_filter_sequence_sparsification_set, s);
 	duration = stop_s - start_s;
 	auto time_sequence_sparsification = duration.count();
 	float fp_rate_sequence_sparsification_relaxed;
-	fp_rate_sequence_sparsification_relaxed = FalsePositiveRate(single_sequence_sparsification_set_relaxed_result, bloom_filter_result_real);
+	fp_rate_sequence_sparsification_relaxed = FalsePositiveRate(
+		single_sequence_sparsification_set_relaxed_result, bloom_filter_result_real);
 	float fp_rate_sequence_sparsification_strict;
-	fp_rate_sequence_sparsification_strict = FalsePositiveRate(single_sequence_sparsification_set_strict_result, bloom_filter_result_real);
+	fp_rate_sequence_sparsification_strict = FalsePositiveRate(
+		single_sequence_sparsification_set_strict_result, bloom_filter_result_real);
 	cout << "Size of Bloom filter using single sequence sparsification: " << memory << " Bytes" << endl;
 	cout << "Sequence Sparsification Bloom Filter-time: " << time_sequence_sparsification << " s" << endl;
 	cout << "Sequence sparsification relaxed Bloom filter-fp rate: " << fp_rate_sequence_sparsification_relaxed << " %" << endl;

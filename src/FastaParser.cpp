@@ -113,20 +113,13 @@ vector<string> FastaParser::BestIndexSparsification()
 		// save all kmers from first line
 		if (counter == 0) {
 			const char* kCLine = current_line.c_str();
-			for (int i = 0; i <= current_line.size() - K; i = i + 1 + s) { 
+			for (int i = 0; i <= current_line.size() - K; i++) { 
 				already_in_set = false;
+				cout<<"ok je 0"<<endl;
 				char* new_kmer = (char*)calloc(K, sizeof(char));
 				strncpy(new_kmer, kCLine + i, K);
 				string* new_kmer_string = new string(new_kmer);
-				//check if kmers are already saved
-				for (string kmer : kmers_to_save) {
-					if (kmer == *new_kmer_string) {
-						already_in_set = true;
-						break;
-					}
-				}
-				if (already_in_set==false)
-					kmers_to_save.push_back(*new_kmer_string);
+				kmers_to_save.push_back(*new_kmer_string);
 			}
 		}
 		// save kmers from best Kr
@@ -137,25 +130,26 @@ vector<string> FastaParser::BestIndexSparsification()
 			int max_freq = 0;
 			int best_index = 0;
 			// take different indexes
-			for (int start_index = 0; start_index <= K + 1; start_index++) {
+			for (int start_index = 0; start_index <= K + 1; start_index += 1 + s) {
+				max_freq = 0;
 				vector<string> kmers_at_best_index;
-				for (int i = start_index; i <= current_line.size() - K; i = i + 1 + s) { 
+				for (int i = start_index; i <= current_line.size() - K; i = i++) { 
+					cout<<"ok je 1"<<endl;
 					char* new_kmer = (char*)calloc(K, sizeof(char));
-					strncpy(new_kmer, kCLine+i, K);
+					cout<<"ok je 11"<<endl;
+					strncpy(new_kmer, kCLine + i, K);
+					cout<<"ok je 111"<<endl;
 					string* new_kmer_string = new string(new_kmer);
+					cout<<"ok je 1111"<<endl;
 					kmers_at_best_index.push_back(*new_kmer_string);
 					// compare kmer with already saved kmers
 					// but only with 50 kmers because it's faster
 
-					int count = 0;
 					for (string saved_kmers : kmers_to_save) {
-						if (count > 50)
-							break;
 						if (*new_kmer_string == saved_kmers) {
 							best_index_map[start_index]++;
 							break;
 						}
-						count++;
 					}
 				}
 				// compare number of already saved kmers with last maximum of same kmers
@@ -168,6 +162,7 @@ vector<string> FastaParser::BestIndexSparsification()
 			//add kmers from best index in kmers set
 			for (int i = best_index; i <= current_line.size() - K; i = i + s + 1) {
 				bool already_in_set = false;
+				cout<<"ok je 2"<<endl;
 				char* new_kmer = (char*)calloc(K, sizeof(char));
 				strncpy(new_kmer, kCLine + i, K);
 				string* new_kmer_string = new string(new_kmer);
