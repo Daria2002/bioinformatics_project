@@ -320,7 +320,7 @@ int main (int argc, char *argv[]) {
 	srand(time(NULL));
 	size_t num_of_cells;
 	int num_of_hashes = 2;
-	int test_set_size = 1000;
+	int test_set_size = 100000;
 	unordered_set<string> kmer_set;
 	vector<string> kmer_set_test;
 	if (argc < 3 || argc > 4) {
@@ -354,13 +354,14 @@ int main (int argc, char *argv[]) {
 	FastaParser fp(fasta_file, K);
 	kmer_set = fp.ParseKmers();
 	int number_of_kmers = kmer_set.size();
-	num_of_cells = number_of_kmers * 3;
+	num_of_cells = 1024*1024*32;
 	bf::basic_bloom_filter *kBloomFilter;
 	kBloomFilter = new bf::basic_bloom_filter(bf::make_hasher(num_of_hashes), num_of_cells);
 	for (auto kmer : kmer_set) {
 		memory += kmer.size() * sizeof(char);
 		kBloomFilter -> add(kmer);
 	}
+	cout << "Kmers added in bloom filter" << endl;
 	size_t result;
 	vector<bool> bloom_filter_result;
 	vector<bool> bloom_filter_result_real;
@@ -369,10 +370,12 @@ int main (int argc, char *argv[]) {
 	auto start_s = chrono::system_clock::now();
 	for (auto kmer : kmer_set_test)
 		bloom_filter_result.push_back((bool)kBloomFilter -> lookup(kmer));
+	cout << "Test kmers checked" << endl;
 	auto stop_s = chrono::system_clock::now();
 	duration = stop_s - start_s;
 	auto time_classic_bloom_filter = duration.count();
 	bloom_filter_result_real = CompareTestKmerWithSavedKmers(kmer_set, kmer_set_test);
+	cout << "Test results compared with real" << endl;
 	float fp_rate_classic_bloom_filter;
 	fp_rate_classic_bloom_filter = FalsePositiveRate(bloom_filter_result, bloom_filter_result_real);
 	cout << "Size of classic Bloom filter: " << memory << " Bytes" << endl;
