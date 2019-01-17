@@ -1,0 +1,9 @@
+Size of classic Bloom filter: 1224250 Bytes
+Classic Bloom Filter-time: 0.0275274 s
+Classic Bloom filter-fp rate: 0.004 %
+Size of one-sided Bloom filter: 1224250 Bytes
+One-sided Bloom Filter-time: 0.0957532 s
+One-sided Bloom filter-fp rate: 0.003 %
+Size of two-sided Bloom filter: 1224250 Bytes
+Two-sided Bloom Filter-time: 15.8578 s
+Two-sided Bloom filter-fp rate: 0.001 %
