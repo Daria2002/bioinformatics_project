@@ -336,7 +336,7 @@ int main (int argc, char *argv[]) {
 	unordered_set<string> kmer_set;
 	vector<string> kmer_set_test;
 	if (argc < 3 || argc > 4) {
-		cerr << "Please write three arguments: path to fasta file, k-mer length and optionally output file"
+		cerr << "Please write three arguments: path to fasta file, k-mer leng and optionally output file"
 			<< endl;
 		return -1;
 	}
@@ -507,7 +507,7 @@ int main (int argc, char *argv[]) {
 	vector<string> best_index_set;
 	FastaParser fp_index_set(fasta_file, K);
 	memory = 0;
-	best_index_set = fp_index_set.-BestIndexSparsification();
+	best_index_set = fp_index_set.BestIndexSparsification();
 	bf::basic_bloom_filter *bloom_filter_best_index;
 	bloom_filter_best_index = new bf::basic_bloom_filter(bf::make_hasher(num_of_hashes), num_of_cells);
 	for (auto kmer : best_index_set) {
@@ -526,7 +526,7 @@ int main (int argc, char *argv[]) {
 	bloom_filter_result_real = CompareTestKmerWithSavedKmers(kmer_set, kmer_set_test);
 	float fp_rate_best_index_relaxed;
 	float fp_rate_best_index_strict;
-	fp_rate_best_index_relaxed = FalsePositiveRate(best_index_relaxed_results, bloom_filter_result_real);
+	//fp_rate_best_index_relaxed = FalsePositiveRate(best_index_relaxed_results, bloom_filter_result_real);
 	fp_rate_best_index_strict = FalsePositiveRate(best_index_strict_results, bloom_filter_result_real);
 	cout << "Size of Bloom filter using best index match: " << memory << " Bytes" << endl;
 	cout << "Best index Bloom Filter-time: " << time_sparse << " s" << endl;
@@ -589,16 +589,16 @@ int main (int argc, char *argv[]) {
 	single_sequence_sparsification_set_relaxed_result = RelaxedContains(
 		kmer_set_test, edge_kmers_set, *bloom_filter_sequence_sparsification_set, s);
 	stop_s = chrono::system_clock::now();
-	single_sequence_sparsification_set_strict_result = StrictContains(
-		kmer_set_test, edge_kmers_set, *bloom_filter_sequence_sparsification_set, s);
+	//single_sequence_sparsification_set_strict_result = StrictContains(
+	//	kmer_set_test, edge_kmers_set, *bloom_filter_sequence_sparsification_set, s);
 	duration = stop_s - start_s;
 	auto time_sequence_sparsification = duration.count();
 	float fp_rate_sequence_sparsification_relaxed;
 	fp_rate_sequence_sparsification_relaxed = FalsePositiveRate(
 		single_sequence_sparsification_set_relaxed_result, bloom_filter_result_real);
 	float fp_rate_sequence_sparsification_strict;
-	fp_rate_sequence_sparsification_strict = FalsePositiveRate(
-		single_sequence_sparsification_set_strict_result, bloom_filter_result_real);
+	//fp_rate_sequence_sparsification_strict = FalsePositiveRate(
+	//	single_sequence_sparsification_set_strict_result, bloom_filter_result_real);
 	cout << "Size of Bloom filter using single sequence sparsification: " << memory << " Bytes" << endl;
 	cout << "Sequence Sparsification Bloom Filter-time: " << time_sequence_sparsification << " s" << endl;
 	cout << "Sequence sparsification relaxed Bloom filter-fp rate: " << fp_rate_sequence_sparsification_relaxed << " %" << endl;
@@ -606,7 +606,7 @@ int main (int argc, char *argv[]) {
 	output_file_stream << "Size of Bloom filter using single sequence sparsification: " << memory << " Bytes" << endl;
 	output_file_stream << "Sequence Sparsification Bloom Filter-time: " << time_sequence_sparsification << " s" << endl;
 	output_file_stream << "Sequence sparsification relaxed Bloom filter-fp rate: " << fp_rate_sequence_sparsification_relaxed << " %" << endl;
-	output_file_stream << "Sequence sparsification strict Bloom filter-fp rate: " << fp_rate_sequence_sparsification_strict << " %" << endl;
+	//output_file_stream << "Sequence sparsification strict Bloom filter-fp rate: " << fp_rate_sequence_sparsification_strict << " %" << endl;
 	output_file_stream.close();
 	return 0;
 }

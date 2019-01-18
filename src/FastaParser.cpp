@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <algorithm>
 #include <iostream>
 
 FastaParser::FastaParser(std::string input_file, int K)
@@ -113,18 +114,11 @@ vector<string> FastaParser::BestIndexSparsification()
 		// save all kmers from first line
 		if (counter == 0) {
 			const char* kCLine = current_line.c_str();
-			for (int i = 0; i <= current_line.size() - K; i = i + 1 + s) { 
+			for (int i = 0; i <= current_line.size() - K; i += s+1) { 
 				already_in_set = false;
 				char* new_kmer = (char*)calloc(K, sizeof(char));
 				strncpy(new_kmer, kCLine + i, K);
 				string* new_kmer_string = new string(new_kmer);
-				//check if kmers are already saved
-				for (string kmer : kmers_to_save) {
-					if (kmer == *new_kmer_string) {
-						already_in_set = true;
-						break;
-					}
-				}
 				if (already_in_set==false)
 					kmers_to_save.push_back(*new_kmer_string);
 			}
@@ -178,7 +172,42 @@ vector<string> FastaParser::BestIndexSparsification()
 	}
 	return kmers_to_save;
 }
+/*
 
+vector<string> FastaParser::BestIndexSparsification() {
+	int s = 1;
+    vector<string> kmers;
+    const int MOD = s + 1;
+    string current_line;
+    while (getline(fasta_stream, current_line)) {
+		if (current_line.at(0) == '>')
+			continue;
+        int count[MOD];
+        int mx_ind = 0;
+        for(int i = 0; i < MOD; i++) count[i] = 0;
+        for(int i = 0; i < current_line.length() - K + 1; i++) {
+        	const char* kCLine = current_line.c_str();
+			char* new_kmer = (char*)calloc(K, sizeof(char));
+			strncpy(new_kmer, kCLine+i, K);
+			string* new_kmer_string = new string(new_kmer);
+            if(std::find(kmers.begin(), kmers.end(), *new_kmer_string) != kmers.end()) {
+                const int ind = i % MOD;
+                if(++count[ind] > count[mx_ind])
+                    mx_ind = ind;
+            }
+        }
+
+        int i = 0;
+        for (i = mx_ind; i < current_line.length() - K + 1; i += MOD) {
+        	char* new_kmer = (char*)calloc(K, sizeof(char));
+        	const char* kCLine = current_line.c_str();
+			strncpy(new_kmer, kCLine+i, K);
+            kmers.push_back(new_kmer);
+        }
+    }
+    return kmers;
+}
+*/
 // returns neighbours for every kmer in sequence
 // key in map is kmer, value in map are neighbours for kmer
 unordered_map<string, int> MakeMapWithKmersAndNeighbours(string sequence, int K) {
